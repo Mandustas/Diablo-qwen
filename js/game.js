@@ -41,6 +41,9 @@ class Game {
         // Создаем систему сохранения
         this.saveSystem = new SaveSystem(this);
 
+        // Создаем миникарту
+        this.minimap = new Minimap(this);
+
         // Загружаем чанки вокруг персонажа
         const spawnTilePos = getTileIndex(this.character.x, this.character.y);
         this.chunkSystem.loadChunksAround(spawnTilePos.tileX, spawnTilePos.tileY);
@@ -794,6 +797,9 @@ class Game {
 
         // Рендерим все объекты с учетом глубины
         this.renderer.renderWithDepth(allRenderables, (obj) => obj.render());
+
+        // Обновляем миникарту
+        this.minimap.update();
 
         // При необходимости рендерим сетку (для отладки)
         // this.renderer.renderGrid();
