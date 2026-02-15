@@ -27,16 +27,16 @@ class SkillBar {
         // Левая панель - Здоровье (круг)
         this.healthPanel = document.createElement('div');
         this.healthPanel.style.position = 'relative';
-        this.healthPanel.style.width = '60px';
-        this.healthPanel.style.height = '60px';
+        this.healthPanel.style.width = GAME_CONFIG.UI.SKILL_BAR.HEALTH_MANA_WIDTH + 'px';
+        this.healthPanel.style.height = GAME_CONFIG.UI.SKILL_BAR.HEALTH_MANA_HEIGHT + 'px';
         
         // Круглый контейнер здоровья
         this.healthBarContainer = document.createElement('div');
-        this.healthBarContainer.style.width = '60px';
-        this.healthBarContainer.style.height = '60px';
+        this.healthBarContainer.style.width = GAME_CONFIG.UI.SKILL_BAR.HEALTH_MANA_WIDTH + 'px';
+        this.healthBarContainer.style.height = GAME_CONFIG.UI.SKILL_BAR.HEALTH_MANA_HEIGHT + 'px';
         this.healthBarContainer.style.borderRadius = '50%';
         this.healthBarContainer.style.backgroundColor = '#1a1a1a';
-        this.healthBarContainer.style.border = '3px solid #3a2a1a';
+        this.healthBarContainer.style.border = GAME_CONFIG.UI.SKILL_BAR.HEALTH_MANA_BORDER_WIDTH + 'px solid #3a2a1a';
         this.healthBarContainer.style.position = 'relative';
         this.healthBarContainer.style.overflow = 'hidden';
         this.healthBarContainer.style.boxShadow = '0 0 10px rgba(0,0,0,0.5), 0 0 5px rgba(255,0,0,0.3)';
@@ -59,26 +59,26 @@ class SkillBar {
         this.skillBarWrapper.id = 'skillBarWrapper';
         this.skillBarWrapper.style.display = 'flex';
         this.skillBarWrapper.style.flexDirection = 'row';
-        this.skillBarWrapper.style.gap = '5px';
+        this.skillBarWrapper.style.gap = GAME_CONFIG.UI.SKILL_BAR.SLOT_GAP + 'px';
         this.skillBarWrapper.style.background = 'linear-gradient(to bottom, #1a1414 0%, #0d0a0a 100%)';
         this.skillBarWrapper.style.border = '2px solid #3a2a1a';
-        this.skillBarWrapper.style.padding = '8px';
+        this.skillBarWrapper.style.padding = GAME_CONFIG.UI.SKILL_BAR.BAR_PADDING + 'px';
         this.skillBarWrapper.style.borderRadius = '3px';
         this.skillBarWrapper.style.boxShadow = '0 0 10px rgba(0,0,0,0.5), inset 0 0 10px rgba(74,58,42,0.2)';
         
         // Правая панель - Мана (круг)
         this.manaPanel = document.createElement('div');
         this.manaPanel.style.position = 'relative';
-        this.manaPanel.style.width = '60px';
-        this.manaPanel.style.height = '60px';
-        
+        this.manaPanel.style.width = GAME_CONFIG.UI.SKILL_BAR.HEALTH_MANA_WIDTH + 'px';
+        this.manaPanel.style.height = GAME_CONFIG.UI.SKILL_BAR.HEALTH_MANA_HEIGHT + 'px';
+
         // Круглый контейнер маны
         this.manaBarContainer = document.createElement('div');
-        this.manaBarContainer.style.width = '60px';
-        this.manaBarContainer.style.height = '60px';
+        this.manaBarContainer.style.width = GAME_CONFIG.UI.SKILL_BAR.HEALTH_MANA_WIDTH + 'px';
+        this.manaBarContainer.style.height = GAME_CONFIG.UI.SKILL_BAR.HEALTH_MANA_HEIGHT + 'px';
         this.manaBarContainer.style.borderRadius = '50%';
         this.manaBarContainer.style.backgroundColor = '#1a1a1a';
-        this.manaBarContainer.style.border = '3px solid #3a2a1a';
+        this.manaBarContainer.style.border = GAME_CONFIG.UI.SKILL_BAR.HEALTH_MANA_BORDER_WIDTH + 'px solid #3a2a1a';
         this.manaBarContainer.style.position = 'relative';
         this.manaBarContainer.style.overflow = 'hidden';
         this.manaBarContainer.style.boxShadow = '0 0 10px rgba(0,0,0,0.5), 0 0 5px rgba(0,0,255,0.3)';
@@ -119,12 +119,12 @@ class SkillBar {
         
         // Обновляем круг здоровья ( circumference = 2 * PI * r = 2 * 3.14159 * 26 ≈ 163.36 )
         const healthPercent = (this.character.health / this.character.maxHealth);
-        const healthOffset = 163.36 * (1 - healthPercent);
+        const healthOffset = GAME_CONFIG.UI.SKILL_BAR.HEALTH_MANA_CIRCLE_CIRCUMFERENCE * (1 - healthPercent);
         this.healthCircle.style.strokeDashoffset = healthOffset;
-        
+
         // Обновляем круг маны
         const manaPercent = (this.character.mana / this.character.maxMana);
-        const manaOffset = 163.36 * (1 - manaPercent);
+        const manaOffset = GAME_CONFIG.UI.SKILL_BAR.HEALTH_MANA_CIRCLE_CIRCUMFERENCE * (1 - manaPercent);
         this.manaCircle.style.strokeDashoffset = manaOffset;
         
         // Меняем цвет здоровья при низком уровне
@@ -146,7 +146,7 @@ class SkillBar {
         this.container.id = 'skillBar';
         this.container.style.display = 'flex';
         this.container.style.flexDirection = 'row';
-        this.container.style.gap = '5px';
+        this.container.style.gap = GAME_CONFIG.UI.SKILL_BAR.SLOT_GAP + 'px';
         
         // Создаем 9 слотов для навыков (под горячие клавиши 1-9)
         for (let i = 1; i <= 9; i++) {
@@ -167,8 +167,8 @@ class SkillBar {
     createSkillSlot(slotNumber) {
         const slot = document.createElement('div');
         slot.className = 'skill-slot';
-        slot.style.width = '50px';
-        slot.style.height = '50px';
+        slot.style.width = GAME_CONFIG.UI.SKILL_BAR.SLOT_WIDTH + 'px';
+        slot.style.height = GAME_CONFIG.UI.SKILL_BAR.SLOT_HEIGHT + 'px';
         slot.style.border = '2px solid #3a2a1a';
         slot.style.borderRadius = '3px';
         slot.style.background = 'linear-gradient(to bottom, #2a1a1a 0%, #1a0f0f 100%)';

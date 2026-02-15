@@ -234,6 +234,131 @@ const GAME_CONFIG = {
     // Настройки обновления
     UPDATE: {
         ENEMY_SPAWN_INTERVAL: 60 // Обновление спауна врагов раз в 60 кадров
+    },
+    
+    // Настройки UI компонентов
+    UI: {
+        INVENTORY_WINDOW: {
+            WIDTH: 400,
+            HEIGHT: 300,
+            SLOT_SIZE: 60,
+            SLOT_GAP: 5,
+            GRID_COLUMNS: 5,
+            PADDING: 20,
+            BORDER_WIDTH: 2,
+            POSITION_TOP: '50%',
+            POSITION_LEFT: '50%'
+        },
+        STATS_WINDOW: {
+            WIDTH: 400,
+            PADDING: 20,
+            BORDER_WIDTH: 2,
+            POSITION_TOP: '50%',
+            POSITION_LEFT: '50%'
+        },
+        SKILL_TREE: {
+            WIDTH: 400,
+            PADDING: 20,
+            BORDER_WIDTH: 2,
+            POSITION_TOP: '50%',
+            POSITION_LEFT: '50%',
+            SKILL_SLOT_WIDTH: 50,
+            SKILL_SLOT_HEIGHT: 50,
+            SKILL_SLOT_GAP: 5,
+            SKILL_GRID_COLUMNS: 2
+        },
+        SKILL_BAR: {
+            SLOT_WIDTH: 50,
+            SLOT_HEIGHT: 50,
+            SLOT_GAP: 5,
+            BAR_PADDING: 8,
+            HEALTH_MANA_WIDTH: 60,
+            HEALTH_MANA_HEIGHT: 60,
+            HEALTH_MANA_BORDER_WIDTH: 3,
+            HEALTH_MANA_CIRCLE_RADIUS: 26,
+            HEALTH_MANA_CIRCLE_CIRCUMFERENCE: 163.36
+        },
+        MINIMAP: {
+            WIDTH: 250,
+            HEIGHT: 250,
+            SCALE: 1.2,
+            PADDING: 8,
+            BORDER_WIDTH: 2,
+            PLAYER_DOT_RADIUS: 4,
+            ENEMY_DOT_RADIUS: 3,
+            POSITION_BOTTOM: 20,
+            POSITION_LEFT: 20
+        }
+    },
+    
+    // Настройки изометрической проекции
+    ISOMETRIC: {
+        ANGLE: Math.atan(0.5), // Угол для изометрической проекции
+        TILE_WIDTH: 64,  // Ширина тайла
+        TILE_HEIGHT: 32  // Высота тайла
+    },
+    
+    // Настройки сохранения
+    SAVE: {
+        KEY: 'diablo_rpg_save'
+    },
+    
+    // Настройки предметов
+    ITEMS: {
+        RARITY_CHANCES: {
+            COMMON: 0.5,      // 50% шанс на обычный
+            UNCOMMON: 0.8,    // 30% шанс на необычный (0.8 - 0.5 = 0.3)
+            RARE: 0.95,       // 15% шанс на редкий (0.95 - 0.8 = 0.15)
+            EPIC: 1.0         // 5% шанс на эпический (1.0 - 0.95 = 0.05)
+        },
+        BASE_VALUE: 10,
+        VALUE_MULTIPLIERS: {
+            UNCOMMON: 2,
+            RARE: 5,
+            EPIC: 10
+        },
+        STAT_VALUE_MULTIPLIER: 5
+    },
+    
+    // Настройки генерации мира
+    WORLD_MAP: {
+        SEED_MULTIPLIER: 10000,
+        ROOM_DENSITY: 0.015, // Плотность комнат на тайл
+        MIN_ROOM_SIZE: 5,
+        MAX_ROOM_SIZE: 10,
+        CORRIDOR_WIDTH: 2,
+        CHUNK_SIZE: 16,
+        LOAD_RADIUS: 4,
+        UNLOAD_RADIUS: 6,
+        EXTRA_CONNECTIONS_PERCENTAGE: 0.3, // 30% дополнительных связей
+        BIOME_CHANCES: {
+            FOREST: 0.2,
+            DESERT: 0.4,
+            MOUNTAIN: 0.6,
+            SWAMP: 0.8
+        },
+        ELEMENT_CHANCES: {
+            ICE: 0.05,      // 5% шанс льда
+            TREE: 0.06,     // 6% шанс дерева
+            ROCK: 0.04,     // 4% шанс скалы
+            ROCK_ALT: 0.12, // 12% шанс скалы (альтернативный)
+            WATER: 0.08     // 8% шанс воды
+        },
+        PASSAGE_BLOCK_CHECK_TYPES: [3, 4, 5], // Типы тайлов, которые могут блокировать проход
+        CONNECTED_PASSABLE_TILES: [0, 6, 7], // Проходимые тайлы для проверки связности
+        MIN_RENDER_RADIUS: 3,
+        RENDER_RADIUS_EXTRA: 2
+    },
+    
+    // Дополнительные настройки тайлов
+    TILE_DIMENSIONS: {
+        WIDTH: 64,
+        HEIGHT: 32
+    },
+    
+    // Настройки поиска позиций
+    POSITION_SEARCH: {
+        MAX_RADIUS: 10
     }
 };
 

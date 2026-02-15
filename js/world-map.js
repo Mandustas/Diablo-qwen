@@ -7,13 +7,13 @@ class WorldMap {
         this.rooms = new Map(); // Глобальный список комнат "worldX,worldY" -> room
         this.corridors = []; // Список всех коридоров мира
         this.chunkRooms = new Map(); // Комнаты в каждом чанке "chunkX,chunkY" -> [rooms]
-        this.seed = Math.random() * 10000; // Seed для генерации
-        
+        this.seed = Math.random() * GAME_CONFIG.WORLD_MAP.SEED_MULTIPLIER; // Seed для генерации
+
         // Параметры генерации мира
-        this.roomDensity = 0.015; // Плотность комнат на тайл
-        this.minRoomSize = 5;
-        this.maxRoomSize = 10;
-        this.corridorWidth = 2;
+        this.roomDensity = GAME_CONFIG.WORLD_MAP.ROOM_DENSITY; // Плотность комнат на тайл
+        this.minRoomSize = GAME_CONFIG.WORLD_MAP.MIN_ROOM_SIZE;
+        this.maxRoomSize = GAME_CONFIG.WORLD_MAP.MAX_ROOM_SIZE;
+        this.corridorWidth = GAME_CONFIG.WORLD_MAP.CORRIDOR_WIDTH;
         
         // Кэш сгенерированных чанков для связи
         this.generatedChunks = new Set();
@@ -219,7 +219,7 @@ class WorldMap {
         }
         
         // Добавляем дополнительные связи для лучшей связности (30%)
-        const extraConnections = Math.floor(rooms.length * 0.3);
+        const extraConnections = Math.floor(rooms.length * GAME_CONFIG.WORLD_MAP.EXTRA_CONNECTIONS_PERCENTAGE);
         for (let i = 0; i < extraConnections; i++) {
             const roomA = rooms[Math.floor(this.randomWithPosition(i, 123) * rooms.length)];
             const roomB = rooms[Math.floor(this.randomWithPosition(i, 456) * rooms.length)];
@@ -344,15 +344,15 @@ class WorldMap {
  * Улучшенная система чанков со связной генерацией карты
  */
 class ConnectedChunkSystem {
-    constructor(chunkSize = 16) {
+    constructor(chunkSize = GAME_CONFIG.WORLD_MAP.CHUNK_SIZE) {
         this.chunkSize = chunkSize;
         this.chunks = new Map();
         this.activeChunks = new Set();
         this.worldMap = new WorldMap();
-        
-        // Радиусы загрузки (уменьшены для производительности)
-        this.loadRadius = 4;
-        this.unloadRadius = 6;
+
+        // Радиусы загрузка (уменьшены для производительности)
+        this.loadRadius = GAME_CONFIG.WORLD_MAP.LOAD_RADIUS;
+        this.unloadRadius = GAME_CONFIG.WORLD_MAP.UNLOAD_RADIUS;
         
         // Кэш для позиции последней загрузки чанков
         this.lastLoadX = null;
@@ -473,17 +473,17 @@ class ConnectedChunkSystem {
     /**
      * Получение чанков для рендеринга
      */
-    getChunksToRender(cameraX, cameraY, screenWidth, screenHeight, tileSize = 64) {
+    getChunksToRender(cameraX, cameraY, screenWidth, screenHeight, tileSize = GAME_CONFIG.TILE.BASE_SIZE) {
         const centerWorldX = cameraX + screenWidth / 2;
         const centerWorldY = cameraY + screenHeight / 2;
-        
+
         const isoCoords = coordToIso(centerWorldX, centerWorldY);
         const centerChunkX = Math.floor(isoCoords.isoX / this.chunkSize);
         const centerChunkY = Math.floor(isoCoords.isoY / this.chunkSize);
-        
+
         const tilesOnScreenX = Math.ceil(screenWidth / (tileSize / 2));
         const tilesOnScreenY = Math.ceil(screenHeight / (tileSize / 4));
-        const renderRadius = Math.max(3, Math.ceil(Math.max(tilesOnScreenX, tilesOnScreenY) / this.chunkSize)) + 2;
+        const renderRadius = Math.max(GAME_CONFIG.WORLD_MAP.MIN_RENDER_RADIUS, Math.ceil(Math.max(tilesOnScreenX, tilesOnScreenY) / this.chunkSize)) + GAME_CONFIG.WORLD_MAP.RENDER_RADIUS_EXTRA;
         
         const chunksToRender = [];
         
@@ -650,10 +650,10 @@ class ConnectedChunk {
      * Получение типа биома на основе случайного значения
      */
     getBiomeType(rand) {
-        if (rand < 0.2) return 'forest';
-        if (rand < 0.4) return 'desert';
-        if (rand < 0.6) return 'mountain';
-        if (rand < 0.8) return 'swamp';
+        if (rand < GAME_CONFIG.WORLD_MAP.BIOME_CHANCES.FOREST) return 'forest';
+        if (rand < GAME_CONFIG.WORLD_MAP.BIOME_CHANCES.DESERT) return 'desert';
+        if (rand < GAME_CONFIG.WORLD_MAP.BIOME_CHANCES.MOUNTAIN) return 'mountain';
+        if (rand < GAME_CONFIG.WORLD_MAP.BIOME_CHANCES.SWAMP) return 'swamp';
         return 'ice';
     }
 
@@ -664,35 +664,35 @@ class ConnectedChunk {
         switch (biomeType) {
             case 'ice':
                 // 5% шанс льда (уменьшено)
-                if (rand < 0.05) {
+                if (rand < GAME_CONFIG.WORLD_MAP.ELEMENT_CHANCES.ICE) {
                     this.tiles[y][x] = 6;
                 }
                 break;
-                
+
             case 'forest':
                 // 6% шанс дерева (уменьшено с 12%)
-                if (rand < 0.06 && !this.wouldBlockPassage(x, y, 3)) {
+                if (rand < GAME_CONFIG.WORLD_MAP.ELEMENT_CHANCES.TREE && !this.wouldBlockPassage(x, y, 3)) {
                     this.tiles[y][x] = 3;
                 }
                 break;
-                
+
             case 'desert':
                 // 4% шанс скалы (уменьшено с 8%)
-                if (rand < 0.04 && !this.wouldBlockPassage(x, y, 4)) {
+                if (rand < GAME_CONFIG.WORLD_MAP.ELEMENT_CHANCES.ROCK && !this.wouldBlockPassage(x, y, 4)) {
                     this.tiles[y][x] = 4;
                 }
                 break;
-                
+
             case 'mountain':
                 // 12% шанс скалы (уменьшено с 25%)
-                if (rand < 0.12 && !this.wouldBlockPassage(x, y, 4)) {
+                if (rand < GAME_CONFIG.WORLD_MAP.ELEMENT_CHANCES.ROCK_ALT && !this.wouldBlockPassage(x, y, 4)) {
                     this.tiles[y][x] = 4;
                 }
                 break;
-                
+
             case 'swamp':
                 // 8% шанс воды (уменьшено с 15%)
-                if (rand < 0.08 && !this.wouldBlockPassage(x, y, 5)) {
+                if (rand < GAME_CONFIG.WORLD_MAP.ELEMENT_CHANCES.WATER && !this.wouldBlockPassage(x, y, 5)) {
                     this.tiles[y][x] = 5;
                 }
                 break;
@@ -709,12 +709,13 @@ class ConnectedChunk {
         // Проверяем связность (упрощенно - только соседние клетки)
         let hasPassableNeighbor = false;
         const dirs = [[0,1], [0,-1], [1,0], [-1,0]];
-        
+
         for (const [dx, dy] of dirs) {
             const nx = x + dx;
             const ny = y + dy;
             if (nx >= 0 && nx < this.size && ny >= 0 && ny < this.size) {
-                if (this.tiles[ny][nx] === 0 || this.tiles[ny][nx] === 6 || this.tiles[ny][nx] === 7) {
+                const tileType = this.tiles[ny][nx];
+                if (GAME_CONFIG.WORLD_MAP.CONNECTED_PASSABLE_TILES.includes(tileType)) {
                     hasPassableNeighbor = true;
                     break;
                 }

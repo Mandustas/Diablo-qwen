@@ -1,7 +1,7 @@
 class SaveSystem {
     constructor(game) {
         this.game = game;
-        this.saveKey = 'diablo_rpg_save';
+        this.saveKey = GAME_CONFIG.SAVE.KEY;
     }
     
     /**

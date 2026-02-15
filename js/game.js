@@ -365,7 +365,7 @@ class Game {
                 tilePos = getTileIndex(nextX, nextY);
             } else {
                 // Резервный вариант, если функция недоступна
-                tilePos = { tileX: Math.floor(nextX / 64), tileY: Math.floor(nextY / 32) };
+                tilePos = { tileX: Math.floor(nextX / GAME_CONFIG.TILE_DIMENSIONS.WIDTH), tileY: Math.floor(nextY / GAME_CONFIG.TILE_DIMENSIONS.HEIGHT) };
             }
 
             // Проверяем коллизии с врагами перед перемещением
@@ -727,7 +727,7 @@ class Game {
         }
         
         // Если центральный тайл непроходим, ищем ближайший проходимый
-        for (let radius = 1; radius < 10; radius++) {
+        for (let radius = 1; radius < GAME_CONFIG.POSITION_SEARCH.MAX_RADIUS; radius++) {
             for (let y = -radius; y <= radius; y++) {
                 for (let x = -radius; x <= radius; x++) {
                     if (Math.abs(x) === radius || Math.abs(y) === radius) { // Только по периметру

@@ -4,9 +4,9 @@
 class Minimap {
     constructor(game) {
         this.game = game;
-        this.width = 250;
-        this.height = 250;
-        this.scale = 1.2; // Уменьшенный масштаб для отображения большей области
+        this.width = GAME_CONFIG.UI.MINIMAP.WIDTH;
+        this.height = GAME_CONFIG.UI.MINIMAP.HEIGHT;
+        this.scale = GAME_CONFIG.UI.MINIMAP.SCALE; // Уменьшенный масштаб для отображения большей области
         
         // Создаем canvas для миникарты
         this.canvas = document.createElement('canvas');
@@ -40,12 +40,12 @@ class Minimap {
         container.id = 'minimapContainer';
         container.style.cssText = `
             position: absolute;
-            bottom: 20px;
-            left: 20px;
+            bottom: ${GAME_CONFIG.UI.MINIMAP.POSITION_BOTTOM}px;
+            left: ${GAME_CONFIG.UI.MINIMAP.POSITION_LEFT}px;
             z-index: 15;
             background: linear-gradient(to bottom, #1a1414 0%, #0d0a0a 100%);
-            border: 2px solid #3a2a1a;
-            padding: 8px;
+            border: ${GAME_CONFIG.UI.MINIMAP.BORDER_WIDTH}px solid #3a2a1a;
+            padding: ${GAME_CONFIG.UI.MINIMAP.PADDING}px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.6), inset 0 0 10px rgba(74,58,42,0.2);
         `;
         
@@ -97,7 +97,7 @@ class Minimap {
         // Рисуем игрока в центре
         ctx.fillStyle = this.colors.player;
         ctx.beginPath();
-        ctx.arc(this.width / 2, this.height / 2, 4, 0, Math.PI * 2);
+        ctx.arc(this.width / 2, this.height / 2, GAME_CONFIG.UI.MINIMAP.PLAYER_DOT_RADIUS, 0, Math.PI * 2);
         ctx.fill();
         
         // Обводка игрока
@@ -224,7 +224,7 @@ class Minimap {
             
             ctx.fillStyle = enemyColor;
             ctx.beginPath();
-            ctx.arc(pos.x, pos.y, 3, 0, Math.PI * 2);
+            ctx.arc(pos.x, pos.y, GAME_CONFIG.UI.MINIMAP.ENEMY_DOT_RADIUS, 0, Math.PI * 2);
             ctx.fill();
         }
     }

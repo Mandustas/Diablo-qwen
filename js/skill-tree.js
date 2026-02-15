@@ -15,18 +15,18 @@ class SkillTree {
         this.container = document.createElement('div');
         this.container.id = 'skillTree';
         this.container.style.position = 'absolute';
-        this.container.style.top = '50%';
-        this.container.style.left = '50%';
+        this.container.style.top = GAME_CONFIG.UI.SKILL_TREE.POSITION_TOP;
+        this.container.style.left = GAME_CONFIG.UI.SKILL_TREE.POSITION_LEFT;
         this.container.style.transform = 'translate(-50%, -50%)';
         this.container.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
-        this.container.style.border = '2px solid #4a4a4a';
+        this.container.style.border = GAME_CONFIG.UI.SKILL_TREE.BORDER_WIDTH + 'px solid #4a4a4a';
         this.container.style.borderRadius = '10px';
-        this.container.style.padding = '20px';
+        this.container.style.padding = GAME_CONFIG.UI.SKILL_TREE.PADDING + 'px';
         this.container.style.zIndex = '100';
         this.container.style.display = 'none'; // Скрыто по умолчанию
         this.container.style.color = 'white';
         this.container.style.fontFamily = 'Arial, sans-serif';
-        this.container.style.minWidth = '400px';
+        this.container.style.minWidth = GAME_CONFIG.UI.SKILL_TREE.WIDTH + 'px';
         
         // Заголовок
         const title = document.createElement('h2');
@@ -60,7 +60,7 @@ class SkillTree {
         // Контейнер для навыков
         this.skillsContainer = document.createElement('div');
         this.skillsContainer.style.display = 'grid';
-        this.skillsContainer.style.gridTemplateColumns = '1fr 1fr'; // Две колонки
+        this.skillsContainer.style.gridTemplateColumns = 'repeat(' + GAME_CONFIG.UI.SKILL_TREE.SKILL_GRID_COLUMNS + ', 1fr)'; // Две колонки
         this.skillsContainer.style.gap = '10px';
         this.container.appendChild(this.skillsContainer);
         

@@ -14,19 +14,19 @@ class InventoryWindow {
         this.container = document.createElement('div');
         this.container.id = 'inventoryWindow';
         this.container.style.position = 'absolute';
-        this.container.style.top = '50%';
-        this.container.style.left = '50%';
+        this.container.style.top = GAME_CONFIG.UI.INVENTORY_WINDOW.POSITION_TOP;
+        this.container.style.left = GAME_CONFIG.UI.INVENTORY_WINDOW.POSITION_LEFT;
         this.container.style.transform = 'translate(-50%, -50%)';
         this.container.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
-        this.container.style.border = '2px solid #4a4a4a';
+        this.container.style.border = GAME_CONFIG.UI.INVENTORY_WINDOW.BORDER_WIDTH + 'px solid #4a4a4a';
         this.container.style.borderRadius = '10px';
-        this.container.style.padding = '20px';
+        this.container.style.padding = GAME_CONFIG.UI.INVENTORY_WINDOW.PADDING + 'px';
         this.container.style.zIndex = '100';
         this.container.style.display = 'none'; // Скрыто по умолчанию
         this.container.style.color = 'white';
         this.container.style.fontFamily = 'Arial, sans-serif';
-        this.container.style.minWidth = '400px';
-        this.container.style.minHeight = '300px';
+        this.container.style.minWidth = GAME_CONFIG.UI.INVENTORY_WINDOW.WIDTH + 'px';
+        this.container.style.minHeight = GAME_CONFIG.UI.INVENTORY_WINDOW.HEIGHT + 'px';
         
         // Заголовок
         const title = document.createElement('h2');
@@ -53,8 +53,8 @@ class InventoryWindow {
         // Контейнер для слотов инвентаря
         this.slotsContainer = document.createElement('div');
         this.slotsContainer.style.display = 'grid';
-        this.slotsContainer.style.gridTemplateColumns = 'repeat(5, 1fr)'; // 5 колонок
-        this.slotsContainer.style.gap = '5px';
+        this.slotsContainer.style.gridTemplateColumns = 'repeat(' + GAME_CONFIG.UI.INVENTORY_WINDOW.GRID_COLUMNS + ', 1fr)'; // 5 колонок
+        this.slotsContainer.style.gap = GAME_CONFIG.UI.INVENTORY_WINDOW.SLOT_GAP + 'px';
         this.container.appendChild(this.slotsContainer);
         
         // Добавляем в документ
@@ -113,8 +113,8 @@ class InventoryWindow {
     createItemSlot(item, index) {
         const slot = document.createElement('div');
         slot.className = 'inventory-slot';
-        slot.style.width = '60px';
-        slot.style.height = '60px';
+        slot.style.width = GAME_CONFIG.UI.INVENTORY_WINDOW.SLOT_SIZE + 'px';
+        slot.style.height = GAME_CONFIG.UI.INVENTORY_WINDOW.SLOT_SIZE + 'px';
         slot.style.border = '2px solid #444';
         slot.style.borderRadius = '5px';
         slot.style.backgroundColor = '#222';
@@ -218,18 +218,18 @@ class StatsWindow {
         this.container = document.createElement('div');
         this.container.id = 'statsWindow';
         this.container.style.position = 'absolute';
-        this.container.style.top = '50%';
-        this.container.style.left = '50%';
+        this.container.style.top = GAME_CONFIG.UI.STATS_WINDOW.POSITION_TOP;
+        this.container.style.left = GAME_CONFIG.UI.STATS_WINDOW.POSITION_LEFT;
         this.container.style.transform = 'translate(-50%, -50%)';
         this.container.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
-        this.container.style.border = '2px solid #4a4a4a';
+        this.container.style.border = GAME_CONFIG.UI.STATS_WINDOW.BORDER_WIDTH + 'px solid #4a4a4a';
         this.container.style.borderRadius = '10px';
-        this.container.style.padding = '20px';
+        this.container.style.padding = GAME_CONFIG.UI.STATS_WINDOW.PADDING + 'px';
         this.container.style.zIndex = '100';
         this.container.style.display = 'none'; // Скрыто по умолчанию
         this.container.style.color = 'white';
         this.container.style.fontFamily = 'Arial, sans-serif';
-        this.container.style.minWidth = '400px';
+        this.container.style.minWidth = GAME_CONFIG.UI.STATS_WINDOW.WIDTH + 'px';
         
         // Заголовок
         const title = document.createElement('h2');

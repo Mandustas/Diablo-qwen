@@ -13,11 +13,11 @@ class Item {
      */
     generateRarity() {
         const roll = Math.random();
-        
-        if (roll < 0.5) return 'common';      // 50% шанс на обычный
-        else if (roll < 0.8) return 'uncommon'; // 30% шанс на необычный
-        else if (roll < 0.95) return 'rare';   // 15% шанс на редкий
-        else return 'epic';                   // 5% шанс на эпический
+
+        if (roll < GAME_CONFIG.ITEMS.RARITY_CHANCES.COMMON) return 'common';
+        else if (roll < GAME_CONFIG.ITEMS.RARITY_CHANCES.UNCOMMON) return 'uncommon';
+        else if (roll < GAME_CONFIG.ITEMS.RARITY_CHANCES.RARE) return 'rare';
+        else return 'epic';
     }
     
     /**
@@ -25,22 +25,22 @@ class Item {
      * @returns {number} - стоимость
      */
     calculateValue() {
-        let baseValue = 10;
-        
+        let baseValue = GAME_CONFIG.ITEMS.BASE_VALUE;
+
         // Увеличиваем стоимость в зависимости от редкости
         switch(this.rarity) {
-            case 'uncommon': baseValue *= 2; break;
-            case 'rare': baseValue *= 5; break;
-            case 'epic': baseValue *= 10; break;
+            case 'uncommon': baseValue *= GAME_CONFIG.ITEMS.VALUE_MULTIPLIERS.UNCOMMON; break;
+            case 'rare': baseValue *= GAME_CONFIG.ITEMS.VALUE_MULTIPLIERS.RARE; break;
+            case 'epic': baseValue *= GAME_CONFIG.ITEMS.VALUE_MULTIPLIERS.EPIC; break;
         }
-        
+
         // Увеличиваем стоимость в зависимости от суммы статов
         let statsSum = 0;
         for (const stat in this.stats) {
             statsSum += this.stats[stat];
         }
-        
-        return Math.floor(baseValue + statsSum * 5);
+
+        return Math.floor(baseValue + statsSum * GAME_CONFIG.ITEMS.STAT_VALUE_MULTIPLIER);
     }
     
     /**
