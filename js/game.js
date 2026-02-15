@@ -47,6 +47,9 @@ class Game {
         // Создаем систему эффектов получения уровня
         this.levelUpEffect = new LevelUpEffect(this.renderer);
 
+        // Создаем систему боевых эффектов
+        this.combatEffects = new CombatEffectsSystem(this.renderer);
+
         // Устанавливаем обработчик изменения уровня персонажа
         this.character.onLevelChanged = (level, x, y) => {
             this.levelUpEffect.triggerLevelUp(x, y, level);
@@ -693,6 +696,9 @@ class Game {
         // Обновляем эффект получения уровня
         this.levelUpEffect.update();
 
+        // Обновляем боевые эффекты
+        this.combatEffects.update();
+
         // Обновляем UI каждый кадр для отзывчивости
         this.updateCharacterUI();
     }
@@ -900,6 +906,9 @@ class Game {
 
         // Рендерим эффект получения уровня
         this.levelUpEffect.render();
+
+        // Рендерим боевые эффекты
+        this.combatEffects.render();
 
         // При необходимости рендерим сетку (для отладки)
         // this.renderer.renderGrid();

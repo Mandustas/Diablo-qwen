@@ -282,59 +282,82 @@ class Enemy {
      */
     attack(target) {
         if (this.attackCooldown === 0) {
+            // Вызываем эффект атаки
+            if (typeof game !== 'undefined' && game.combatEffects) {
+                console.log('Вызов эффекта атаки для врага', this.x, this.y);
+                game.combatEffects.triggerAttack(this.x, this.y, 'enemy');
+            } else {
+                console.warn('Боевая система эффектов не доступна при атаке врагом');
+            }
+
             // Рассчитываем шанс попадания
             const accuracy = this.getTotalStat('accuracy');
             const targetDodge = target.getTotalStat ? target.getTotalStat('dodge') : 0;
             const hitChance = (accuracy - targetDodge) / 100;
-            
+
             if (Math.random() <= hitChance) {
                 // Рассчитываем урон с учетом брони цели
                 const targetArmor = target.getTotalStat ? target.getTotalStat('armor') : 0;
                 let damage = Math.floor(this.damage * (0.8 + Math.random() * 0.4)); // Разброс урона 80-120%
-                
+
                 // Применяем броню (уменьшаем урон)
                 damage = Math.max(1, damage - targetArmor); // Минимум 1 урон
-                
+
                 // Проверяем на критический удар
                 const criticalChance = this.getTotalStat('critical') / 100;
+                let isCritical = false;
                 if (Math.random() <= criticalChance) {
                     damage = Math.floor(damage * 1.5); // Критический урон 150%
                     console.log('Враг нанес КРИТИЧЕСКИЙ УДАР!');
+                    isCritical = true;
                 }
-                
-                const actualDamage = target.takeDamage(damage);
+
+                const actualDamage = target.takeDamage(damage, isCritical);
                 console.log(`Враг атаковал игрока, нанесено урона: ${actualDamage}`);
-                
+
                 // Сбрасываем кулдаун атаки
                 this.attackCooldown = this.maxAttackCooldown;
-                
+
                 return actualDamage;
             } else {
-                // Промах
+                // Промах - вызываем эффект уворота для цели
+                if (typeof game !== 'undefined' && game.combatEffects) {
+                    console.log('Вызов эффекта уворота для цели', target.x, target.y);
+                    game.combatEffects.triggerDodge(target.x, target.y);
+                }
                 console.log('Враг промахнулся!');
                 return 0;
             }
         }
-        
+
         return 0;
     }
     
     /**
      * Получение урона
      * @param {number} damage - количество урона
+     * @param {boolean} isCritical - является ли урон критическим
      * @returns {number} - фактический полученный урон
      */
-    takeDamage(damage) {
+    takeDamage(damage, isCritical = false) {
         // Учитываем броню врага при получении урона
         const totalArmor = this.getTotalStat('armor');
         const actualDamage = Math.max(1, damage - totalArmor); // Минимум 1 урон
         this.health -= actualDamage;
-        
+
+        // Вызываем эффект получения урона
+        if (typeof game !== 'undefined' && game.combatEffects) {
+            console.log('Вызов эффекта получения урона для врага', this.x, this.y, actualDamage, isCritical);
+            game.combatEffects.triggerDamage(this.x, this.y, actualDamage, isCritical);
+        } else {
+            console.warn('Боевая система эффектов не доступна при получении урона врагом');
+        }
+
         if (this.health <= 0) {
             this.health = 0;
             return actualDamage;
         }
-        
+
         return actualDamage;
     }
     

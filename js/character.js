@@ -92,19 +92,28 @@ class Character {
     /**
      * Получение урона
      * @param {number} damage - количество урона
+     * @param {boolean} isCritical - является ли урон критическим
      */
-    takeDamage(damage) {
+    takeDamage(damage, isCritical = false) {
         // Учитываем броню при получении урона
         const totalArmor = this.getTotalStat('armor');
         const actualDamage = Math.max(1, damage - totalArmor); // Минимум 1 урон
         this.health -= actualDamage;
-        
+
+        // Вызываем эффект получения урона
+        if (typeof game !== 'undefined' && game.combatEffects) {
+            console.log('Вызов эффекта получения урона для персонажа', this.x, this.y, actualDamage, isCritical);
+            game.combatEffects.triggerDamage(this.x, this.y, actualDamage, isCritical);
+        } else {
+            console.warn('Боевая система эффектов не доступна при получении урона персонажем');
+        }
+
         if (this.health <= 0) {
             this.health = 0;
             // Персонаж умер
             this.onDeath();
         }
-        
+
         return actualDamage;
     }
     
@@ -122,33 +131,47 @@ class Character {
      * @returns {number} - нанесённый урон
      */
     attack(target) {
+        // Вызываем эффект атаки
+        if (typeof game !== 'undefined' && game.combatEffects) {
+            console.log('Вызов эффекта атаки для персонажа', this.x, this.y);
+            game.combatEffects.triggerAttack(this.x, this.y, 'player');
+        } else {
+            console.warn('Боевая система эффектов не доступна при атаке персонажем');
+        }
+
         // Базовый урон зависит от силы и оружия
         const baseDamage = this.getTotalStat('damage');
-        
+
         // Рассчитываем шанс попадания
         const accuracy = this.getTotalStat('accuracy');
         const targetDodge = target.getTotalStat ? target.getTotalStat('dodge') : 0; // Учитываем уклонение цели
         const hitChance = (accuracy - targetDodge) / 100;
-        
+
         // Проверяем, попали ли
         if (Math.random() <= hitChance) {
             // Рассчитываем урон с учетом брони цели
             const targetArmor = target.getTotalStat ? target.getTotalStat('armor') : 0;
             let damage = Math.floor(baseDamage * (0.8 + Math.random() * 0.4)); // Разброс урона 80-120%
-            
+
             // Применяем броню (уменьшаем урон)
             damage = Math.max(1, damage - targetArmor); // Минимум 1 урон
-            
+
             // Проверяем на критический удар
             const criticalChance = this.getTotalStat('critical') / 100;
+            let isCritical = false;
             if (Math.random() <= criticalChance) {
                 damage = Math.floor(damage * 1.5); // Критический урон 150%
                 console.log('КРИТИЧЕСКИЙ УДАР!');
+                isCritical = true;
             }
-            
-            return target.takeDamage(damage);
+
+            return target.takeDamage(damage, isCritical);
         } else {
-            // Промах
+            // Промах - вызываем эффект уворота для цели
+            if (typeof game !== 'undefined' && game.combatEffects) {
+                console.log('Вызов эффекта уворота для цели', target.x, target.y);
+                game.combatEffects.triggerDodge(target.x, target.y);
+            }
             console.log('Промах!');
             return 0;
         }
