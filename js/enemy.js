@@ -5,10 +5,10 @@ class Enemy {
         this.type = type;
         this.width = 30;
         this.height = 30;
-        
+
         // Уникальные характеристики в зависимости от типа
         this.stats = this.generateStatsByType(type);
-        
+
         this.health = this.stats.maxHealth;
         this.maxHealth = this.stats.maxHealth;
         this.speed = this.stats.speed;
@@ -16,10 +16,10 @@ class Enemy {
         this.detectionRange = this.stats.detectionRange;
         this.attackRange = this.stats.attackRange;
         this.attackCooldown = 0;
-        this.maxAttackCooldown = 45; // 45 тиков между атаками (быстрее атакуют)
-        
+        this.maxAttackCooldown = GAME_CONFIG.ENEMY.ATTACK_COOLDOWN; // Тиков между атаками
+
         // Хитбокс
-        this.hitboxRadius = 15; // Радиус хитбокса врага
+        this.hitboxRadius = GAME_CONFIG.ENEMY.HITBOX_RADIUS; // Радиус хитбокса врага
         
         // Состояние врага
         this.state = 'idle'; // idle, chasing, attacking, wandering
@@ -28,7 +28,7 @@ class Enemy {
         // Параметры для имитации жизнедеятельности (блуждание)
         this.wanderTarget = null;
         this.wanderTimer = 0;
-        this.wanderInterval = 120 + Math.random() * 180; // 2-5 секунд блуждания
+        this.wanderInterval = GAME_CONFIG.ENEMY.WANDER_INTERVAL_MIN + Math.random() * (GAME_CONFIG.ENEMY.WANDER_INTERVAL_MAX - GAME_CONFIG.ENEMY.WANDER_INTERVAL_MIN); // 2-5 секунд блуждания
         this.idleAnimTimer = 0;
         this.lastX = x;
         this.lastY = y;
@@ -40,53 +40,21 @@ class Enemy {
      * @returns {Object} - объект с характеристиками
      */
     generateStatsByType(type) {
-        const baseStats = {
-            maxHealth: 50,
-            speed: 1,
-            damage: 10,
-            detectionRange: 100,
-            attackRange: 30
-        };
-        
         switch(type) {
             case 'weak':
-                return {
-                    maxHealth: 30,
-                    speed: 1.2,
-                    damage: 8,
-                    detectionRange: 80,
-                    attackRange: 25
-                };
-                
+                return GAME_CONFIG.ENEMY.TYPES.WEAK;
+
             case 'strong':
-                return {
-                    maxHealth: 80,
-                    speed: 0.8,
-                    damage: 15,
-                    detectionRange: 120,
-                    attackRange: 35
-                };
-                
+                return GAME_CONFIG.ENEMY.TYPES.STRONG;
+
             case 'fast':
-                return {
-                    maxHealth: 40,
-                    speed: 1.8,
-                    damage: 12,
-                    detectionRange: 150,
-                    attackRange: 30
-                };
-                
+                return GAME_CONFIG.ENEMY.TYPES.FAST;
+
             case 'tank':
-                return {
-                    maxHealth: 120,
-                    speed: 0.5,
-                    damage: 20,
-                    detectionRange: 70,
-                    attackRange: 40
-                };
-                
+                return GAME_CONFIG.ENEMY.TYPES.TANK;
+
             default: // basic
-                return baseStats;
+                return GAME_CONFIG.ENEMY.TYPES.BASIC;
         }
     }
     
@@ -148,17 +116,17 @@ class Enemy {
         // Каждые 2-5 секунд выбираем новую цель для блуждания
         if (this.wanderTimer >= this.wanderInterval || !this.wanderTarget) {
             // Выбираем случайную точку для блуждания
-            const wanderDistance = 30 + Math.random() * 70; // 30-100 пикселей
+            const wanderDistance = GAME_CONFIG.ENEMY.WANDER_DISTANCE_MIN + Math.random() * (GAME_CONFIG.ENEMY.WANDER_DISTANCE_MAX - GAME_CONFIG.ENEMY.WANDER_DISTANCE_MIN); // 30-100 пикселей
             const wanderAngle = Math.random() * Math.PI * 2;
-            
+
             this.wanderTarget = {
                 x: this.x + Math.cos(wanderAngle) * wanderDistance,
                 y: this.y + Math.sin(wanderAngle) * wanderDistance
             };
-            
+
             // Сбрасываем таймер и интервал
             this.wanderTimer = 0;
-            this.wanderInterval = 120 + Math.random() * 180; // 2-5 секунд
+            this.wanderInterval = GAME_CONFIG.ENEMY.WANDER_INTERVAL_MIN + Math.random() * (GAME_CONFIG.ENEMY.WANDER_INTERVAL_MAX - GAME_CONFIG.ENEMY.WANDER_INTERVAL_MIN); // 2-5 секунд
         }
         
         // Если есть цель для блуждания, двигаемся к ней
@@ -175,7 +143,7 @@ class Enemy {
                 this.wanderTimer = 0;
             } else {
                 // Двигаемся к цели блуждания (медленнее, чем к игроку)
-                const wanderSpeed = this.speed * 0.5; // Половина обычной скорости
+                const wanderSpeed = this.speed * GAME_CONFIG.ENEMY.WANDER_SPEED_MULTIPLIER; // Половина обычной скорости
                 const moveX = (dx / distance) * wanderSpeed;
                 const moveY = (dy / distance) * wanderSpeed;
                 

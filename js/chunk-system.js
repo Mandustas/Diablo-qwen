@@ -43,15 +43,15 @@ class Chunk {
 }
 
 class ChunkSystem {
-    constructor(chunkSize = 16) {
+    constructor(chunkSize = GAME_CONFIG.CHUNK_SYSTEM.DEFAULT_SIZE) {
         this.chunkSize = chunkSize;
         this.chunks = new Map(); // Хранит чанки в формате "x,y" -> Chunk
         this.activeChunks = new Set(); // Активные (загруженные) чанки
         this.generator = new AdvancedDungeonGenerator(chunkSize, chunkSize);
-        
+
         // Радиусы для загрузки и выгрузки чанков (адаптированы под увеличенный зум камеры для производительности)
-        this.loadRadius = 5; // Загружаем чанки в радиусе 5 от игрока (уменьшено с 8 для улучшения производительности)
-        this.unloadRadius = 7; // Выгружаем чанки за пределами радиуса 7 (уменьшено с 12 для улучшения производительности)
+        this.loadRadius = GAME_CONFIG.CHUNK_SYSTEM.LOAD_RADIUS; // Загружаем чанки в радиусе 5 от игрока (уменьшено с 8 для улучшения производительности)
+        this.unloadRadius = GAME_CONFIG.CHUNK_SYSTEM.UNLOAD_RADIUS; // Выгружаем чанки за пределами радиуса 7 (уменьшено с 12 для улучшения производительности)
     }
 
     getChunkKey(chunkX, chunkY) {

@@ -6,21 +6,21 @@ class Character {
         this.isoY = 0;        // Изометрическая координата Y
         this.width = 32;      // Ширина персонажа
         this.height = 32;     // Высота персонажа
-        
+
         // Характеристики персонажа
-        this.health = 100;
-        this.maxHealth = 100;
-        this.mana = 50;       // Мана для использования навыков
-        this.maxMana = 50;    // Максимальная mana
-        this.level = 1;
-        this.experience = 0;
-        this.experienceForNextLevel = 100;
-        
+        this.health = GAME_CONFIG.CHARACTER.INITIAL_HEALTH;
+        this.maxHealth = GAME_CONFIG.CHARACTER.INITIAL_HEALTH;
+        this.mana = GAME_CONFIG.CHARACTER.INITIAL_MANA;       // Мана для использования навыков
+        this.maxMana = GAME_CONFIG.CHARACTER.INITIAL_MANA;    // Максимальная mana
+        this.level = GAME_CONFIG.CHARACTER.INITIAL_LEVEL;
+        this.experience = GAME_CONFIG.CHARACTER.INITIAL_EXPERIENCE;
+        this.experienceForNextLevel = GAME_CONFIG.CHARACTER.EXPERIENCE_PER_LEVEL;
+
         // Статы
-        this.strength = 10;   // Сила влияет на физический урон
-        this.dexterity = 10;  // Ловкость влияет на шанс попадания и уклонения
-        this.vitality = 10;   // Живучесть влияет на здоровье
-        this.energy = 10;     // Энергия влияет на магию и восстановление маны
+        this.strength = GAME_CONFIG.CHARACTER.INITIAL_STRENGTH;   // Сила влияет на физический урон
+        this.dexterity = GAME_CONFIG.CHARACTER.INITIAL_DEXTERITY;  // Ловкость влияет на шанс попадания и уклонения
+        this.vitality = GAME_CONFIG.CHARACTER.INITIAL_VITALITY;   // Живучесть влияет на здоровье
+        this.energy = GAME_CONFIG.CHARACTER.INITIAL_ENERGY;     // Энергия влияет на магию и восстановление маны
         
         // Слоты экипировки
         this.equipment = {
@@ -32,7 +32,7 @@ class Character {
         };
         
         // Инвентарь
-        this.inventory = Array(20).fill(null); // 20 слотов инвентаря
+        this.inventory = Array(GAME_CONFIG.CHARACTER.INVENTORY_SIZE).fill(null); // Слоты инвентаря из конфига
         
         // Навыки
         this.skillPoints = 0; // Очков навыков для распределения
@@ -52,7 +52,7 @@ class Character {
         };
         
         // Хитбокс
-        this.hitboxRadius = 16; // Радиус хитбокса персонажа
+        this.hitboxRadius = GAME_CONFIG.CHARACTER.HITBOX_RADIUS; // Радиус хитбокса персонажа
         
         // Обновляем изометрические координаты
         this.updateIsoCoords();
@@ -161,28 +161,28 @@ class Character {
      */
     getTotalStat(statName) {
         let baseValue = 0;
-        
+
         switch(statName) {
             case 'health':
-                baseValue = this.vitality * 10; // Каждая единица живучести даёт 10 хп
+                baseValue = this.vitality * GAME_CONFIG.CHARACTER.VITALITY_HP_MULTIPLIER; // Каждая единица живучести даёт 10 хп
                 break;
             case 'mana':
-                baseValue = this.energy * 5; // Каждая единица энергии даёт 5 маны
+                baseValue = this.energy * GAME_CONFIG.CHARACTER.ENERGY_MANA_MULTIPLIER; // Каждая единица энергии даёт 5 маны
                 break;
             case 'damage':
-                baseValue = this.strength * 1.5; // Каждая единица силы даёт 1.5 урона
+                baseValue = this.strength * GAME_CONFIG.CHARACTER.STRENGTH_DAMAGE_MULTIPLIER; // Каждая единица силы даёт 1.5 урона
                 break;
             case 'armor':
-                baseValue = this.vitality * 0.5; // Каждая единица живучести даёт 0.5 брони
+                baseValue = this.vitality * GAME_CONFIG.CHARACTER.VITALITY_ARMOR_MULTIPLIER; // Каждая единица живучести даёт 0.5 брони
                 break;
             case 'accuracy':
-                baseValue = 80 + this.dexterity * 0.5; // Базовый шанс попадания 80% + ловкость
+                baseValue = GAME_CONFIG.CHARACTER.DEXTERITY_ACCURACY_BASE + this.dexterity * GAME_CONFIG.CHARACTER.DEXTERITY_ACCURACY_MULTIPLIER; // Базовый шанс попадания 80% + ловкость
                 break;
             case 'dodge':
-                baseValue = this.dexterity * 0.3; // Каждая единица ловкости даёт 0.3% уклонения
+                baseValue = this.dexterity * GAME_CONFIG.CHARACTER.DEXTERITY_DODGE_MULTIPLIER; // Каждая единица ловкости даёт 0.3% уклонения
                 break;
             case 'critical':
-                baseValue = this.dexterity * 0.2; // Каждая единица ловкости даёт 0.2% к крит. шансу
+                baseValue = this.dexterity * GAME_CONFIG.CHARACTER.DEXTERITY_CRITICAL_MULTIPLIER; // Каждая единица ловкости даёт 0.2% к крит. шансу
                 break;
             default:
                 baseValue = this[statName] || 0;
@@ -224,17 +224,17 @@ class Character {
     levelUp() {
         this.level++;
         this.experience -= this.experienceForNextLevel;
-        this.experienceForNextLevel = Math.floor(this.experienceForNextLevel * 1.5); // Увеличиваем требуемый опыт
+        this.experienceForNextLevel = Math.floor(this.experienceForNextLevel * GAME_CONFIG.CHARACTER.EXPERIENCE_MULTIPLIER); // Увеличиваем требуемый опыт
 
         // Увеличиваем характеристики
-        this.maxHealth += 20;
+        this.maxHealth += GAME_CONFIG.CHARACTER.LEVEL_UP_HEALTH_INCREASE;
         this.health = this.maxHealth;
-        this.maxMana += 10; // Увеличиваем максимальную ману
+        this.maxMana += GAME_CONFIG.CHARACTER.LEVEL_UP_MANA_INCREASE; // Увеличиваем максимальную ману
         this.mana = this.maxMana; // Восстанавливаем ману при повышении уровня
-        this.strength += 2;
-        this.dexterity += 2;
-        this.vitality += 2;
-        this.energy += 1;
+        this.strength += GAME_CONFIG.CHARACTER.LEVEL_UP_STAT_INCREASE;
+        this.dexterity += GAME_CONFIG.CHARACTER.LEVEL_UP_STAT_INCREASE;
+        this.vitality += GAME_CONFIG.CHARACTER.LEVEL_UP_STAT_INCREASE;
+        this.energy += GAME_CONFIG.CHARACTER.LEVEL_UP_ENERGY_INCREASE;
 
         // Добавляем очко навыков за каждый уровень
         this.gainSkillPoint();
@@ -598,26 +598,26 @@ class Character {
         // Расчет бонуса в зависимости от типа навыка
         switch(skillName) {
             case 'melee_mastery':
-                return this.getTotalStat('damage') * 0.1 * skill.level; // +10% урона за уровень
-                
+                return this.getTotalStat('damage') * GAME_CONFIG.CHARACTER.MELEE_MASTERY_BONUS * skill.level; // +10% урона за уровень
+
             case 'critical_strike':
-                return skill.level * 5; // +5% шанса крита за уровень
-                
+                return skill.level * GAME_CONFIG.CHARACTER.CRITICAL_STRIKE_BONUS; // +5% шанса крита за уровень
+
             case 'life_leech':
-                return skill.level * 2; // 2% похищения за уровень
-                
+                return skill.level * GAME_CONFIG.CHARACTER.LIFE_LEECH_BONUS; // 2% похищения за уровень
+
             case 'iron_skin':
-                return this.getTotalStat('armor') * 0.1 * skill.level; // +10% брони за уровень
-                
+                return this.getTotalStat('armor') * GAME_CONFIG.CHARACTER.IRON_SKIN_BONUS * skill.level; // +10% брони за уровень
+
             case 'dodge':
-                return skill.level * 3; // +3% уклонения за уровень
-                
+                return skill.level * GAME_CONFIG.CHARACTER.DODGE_BONUS; // +3% уклонения за уровень
+
             case 'fireball':
-                return 10 * skill.level; // +10 урона за уровень
-                
+                return GAME_CONFIG.CHARACTER.FIREBALL_DAMAGE_BONUS * skill.level; // +10 урона за уровень
+
             case 'heal':
-                return this.maxHealth * 0.05 * skill.level; // +5% хила за уровень
-                
+                return this.maxHealth * GAME_CONFIG.CHARACTER.HEAL_PERCENT_BONUS * skill.level; // +5% хила за уровень
+
             default:
                 return skill.level; // По умолчанию просто уровень
         }
@@ -744,11 +744,11 @@ class Character {
         // Базовая стоимость в зависимости от типа навыка
         switch(skillName) {
             case 'fireball':
-                return 10 + (skill.level * 2); // 10 + 2 за уровень
+                return GAME_CONFIG.CHARACTER.SKILL_MANA_COST.fireball.base + (skill.level * GAME_CONFIG.CHARACTER.SKILL_MANA_COST.fireball.per_level); // 10 + 2 за уровень
             case 'heal':
-                return 8 + (skill.level * 1.5); // 8 + 1.5 за уровень
+                return GAME_CONFIG.CHARACTER.SKILL_MANA_COST.heal.base + (skill.level * GAME_CONFIG.CHARACTER.SKILL_MANA_COST.heal.per_level); // 8 + 1.5 за уровень
             default:
-                return 5 + skill.level; // 5 + 1 за уровень
+                return GAME_CONFIG.CHARACTER.SKILL_MANA_COST.default.base + skill.level; // 5 + 1 за уровень
         }
     }
     
@@ -793,7 +793,7 @@ class Character {
      */
     getManaRegenRate() {
         // Базовое восстановление + бонус от энергии
-        return 1 + this.getTotalStat('energy') * 0.1;
+        return GAME_CONFIG.CHARACTER.BASE_MANA_REGEN + this.getTotalStat('energy') * GAME_CONFIG.CHARACTER.ENERGY_MANA_REGEN_MULTIPLIER;
     }
     
     /**
@@ -802,7 +802,7 @@ class Character {
     regenerateMana() {
         // Восстанавливаем ману по чуть-чуть каждый тик
         if (this.mana < this.maxMana) {
-            const regenAmount = this.getManaRegenRate() / 60; // Предполагаем 60 FPS
+            const regenAmount = this.getManaRegenRate() / GAME_CONFIG.CHARACTER.FPS_FOR_MANA_REGEN; // Предполагаем 60 FPS
             this.restoreMana(regenAmount);
         }
     }

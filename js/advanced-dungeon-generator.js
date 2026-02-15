@@ -16,9 +16,9 @@ class AdvancedDungeonGenerator {
      * @param {number} biomeCount - количество биомов
      * @returns {Array<Array<number>>} - сгенерированная карта
      */
-    generateDungeon(roomCount = 8, minRoomSize = 6, maxRoomSize = 14, biomeCount = 3) {
+    generateDungeon(roomCount = GAME_CONFIG.DUNGEON_GENERATOR.DEFAULT_ROOM_COUNT, minRoomSize = GAME_CONFIG.DUNGEON_GENERATOR.DEFAULT_MIN_ROOM_SIZE, maxRoomSize = GAME_CONFIG.DUNGEON_GENERATOR.DEFAULT_MAX_ROOM_SIZE, biomeCount = GAME_CONFIG.DUNGEON_GENERATOR.DEFAULT_BIOME_COUNT) {
         let attempts = 0;
-        const maxAttempts = 10; // Максимальное количество попыток генерации
+        const maxAttempts = GAME_CONFIG.DUNGEON_GENERATOR.MAX_GENERATION_ATTEMPTS; // Максимальное количество попыток генерации
 
         // Рассчитываем количество биомов пропорционально размеру карты
         const calculatedBiomeCount = Math.max(Math.floor((this.width * this.height) / 400), 3);
@@ -668,11 +668,11 @@ class AdvancedDungeonGenerator {
         switch (biome.type) {
             case 'forest':
                 // Шанс на дерево
-                if (Math.random() < 0.15 * biome.density) {
+                if (Math.random() < GAME_CONFIG.DUNGEON_GENERATOR.FOREST_TREE_CHANCE * biome.density) {
                     // Временно добавляем дерево
                     const originalType = this.map[y][x];
                     this.map[y][x] = 3; // Дерево (непроходимое)
-                    
+
                     // Проверяем, не нарушили ли мы связность карты
                     if (!this.isMapFullyConnected()) {
                         // Если нарушили, откатываем изменение
@@ -680,14 +680,14 @@ class AdvancedDungeonGenerator {
                     }
                 }
                 break;
-                
+
             case 'desert':
                 // Шанс на скалу или кактус
-                if (Math.random() < 0.1 * biome.density) {
+                if (Math.random() < GAME_CONFIG.DUNGEON_GENERATOR.DESERT_ROCK_CHANCE * biome.density) {
                     // Временно добавляем скалу
                     const originalType = this.map[y][x];
                     this.map[y][x] = 4; // Скала (непроходимая)
-                    
+
                     // Проверяем, не нарушили ли мы связность карты
                     if (!this.isMapFullyConnected()) {
                         // Если нарушили, откатываем изменение
@@ -695,14 +695,14 @@ class AdvancedDungeonGenerator {
                     }
                 }
                 break;
-                
+
             case 'mountain':
                 // Высокая вероятность скал
-                if (Math.random() < 0.3 * biome.density) {
+                if (Math.random() < GAME_CONFIG.DUNGEON_GENERATOR.MOUNTAIN_ROCK_CHANCE * biome.density) {
                     // Временно добавляем скалу
                     const originalType = this.map[y][x];
                     this.map[y][x] = 4; // Скала (непроходимая)
-                    
+
                     // Проверяем, не нарушили ли мы связность карты
                     if (!this.isMapFullyConnected()) {
                         // Если нарушили, откатываем изменение
@@ -710,14 +710,14 @@ class AdvancedDungeonGenerator {
                     }
                 }
                 break;
-                
+
             case 'swamp':
                 // Шанс на воду или грязь
-                if (Math.random() < 0.2 * biome.density) {
+                if (Math.random() < GAME_CONFIG.DUNGEON_GENERATOR.SWAMP_WATER_CHANCE * biome.density) {
                     // Временно добавляем воду
                     const originalType = this.map[y][x];
                     this.map[y][x] = 5; // Вода (непроходимая)
-                    
+
                     // Проверяем, не нарушили ли мы связность карты
                     if (!this.isMapFullyConnected()) {
                         // Если нарушили, откатываем изменение
@@ -725,10 +725,10 @@ class AdvancedDungeonGenerator {
                     }
                 }
                 break;
-                
+
             case 'ice':
                 // Шанс на лед (скользкий, но проходимый)
-                if (Math.random() < 0.1 * biome.density) {
+                if (Math.random() < GAME_CONFIG.DUNGEON_GENERATOR.ICE_ICE_CHANCE * biome.density) {
                     this.map[y][x] = 6; // Лед (проходимый, но с эффектом)
                 }
                 break;
@@ -740,10 +740,10 @@ class AdvancedDungeonGenerator {
      */
     addObstacles() {
         // Рассчитываем шанс появления препятствий в зависимости от размера карты
-        const baseObstacleChance = 0.05;
+        const baseObstacleChance = GAME_CONFIG.DUNGEON_GENERATOR.OBSTACLE_CHANCE_BASE;
         const sizeFactor = Math.min((this.width * this.height) / (20 * 20), 2); // Множитель от размера карты
         const obstacleChance = baseObstacleChance * sizeFactor;
-        
+
         // Добавляем случайные препятствия в коридорах и на свободных тайлах
         for (let y = 1; y < this.height - 1; y++) {
             for (let x = 1; x < this.width - 1; x++) {
@@ -751,16 +751,16 @@ class AdvancedDungeonGenerator {
                 if (this.map[y][x] === 0) {
                     // Slightly increase chance of obstacles in corridors
                     const isCorridor = this.isCorridor(x, y);
-                    const localObstacleChance = isCorridor ? obstacleChance * 1.5 : obstacleChance;
-                    
+                    const localObstacleChance = isCorridor ? obstacleChance * GAME_CONFIG.DUNGEON_GENERATOR.CORRIDOR_OBSTACLE_MULTIPLIER : obstacleChance;
+
                     if (Math.random() < localObstacleChance) {
                         // Случайный тип препятствия
                         const obstacleType = Math.random() < 0.7 ? 3 : 4; // 70% деревья, 30% скалы
-                        
+
                         // Временно добавляем препятствие
                         const originalType = this.map[y][x];
                         this.map[y][x] = obstacleType;
-                        
+
                         // Проверяем, не нарушили ли мы связность карты
                         if (!this.isMapFullyConnected()) {
                             // Если нарушили, откатываем изменение
@@ -806,10 +806,10 @@ class AdvancedDungeonGenerator {
      */
     addDecorations() {
         // Рассчитываем шанс появления декораций в зависимости от размера карты
-        const baseDecorationChance = 0.03;
+        const baseDecorationChance = GAME_CONFIG.DUNGEON_GENERATOR.DECORATION_CHANCE_BASE;
         const sizeFactor = Math.min((this.width * this.height) / (20 * 20), 1.5); // Множитель от размера карты
         const decorationChance = baseDecorationChance * sizeFactor;
-        
+
         // Добавляем случайные элементы декорации
         for (let y = 1; y < this.height - 1; y++) {
             for (let x = 1; x < this.width - 1; x++) {
@@ -817,7 +817,7 @@ class AdvancedDungeonGenerator {
                     // Временно добавляем декорацию
                     const originalType = this.map[y][x];
                     this.map[y][x] = 7; // Декоративный элемент (проходимый)
-                    
+
                     // Проверяем, не нарушили ли мы связность карты
                     if (!this.isMapFullyConnected()) {
                         // Если нарушили, откатываем изменение

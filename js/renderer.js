@@ -5,36 +5,36 @@ class Renderer {
         this.camera = {
             x: 0,
             y: 0,
-            zoom: 4.0, // Увеличенный зум для отображения меньшего количества объектов и улучшения производительности
-            minZoom: 0.5,
-            maxZoom: 5.0,
-            targetZoom: 4.0 // Для плавного зуммирования
+            zoom: GAME_CONFIG.CAMERA.DEFAULT_ZOOM, // Увеличенный зум для отображения меньшего количества объектов и улучшения производительности
+            minZoom: GAME_CONFIG.CAMERA.MIN_ZOOM,
+            maxZoom: GAME_CONFIG.CAMERA.MAX_ZOOM,
+            targetZoom: GAME_CONFIG.CAMERA.DEFAULT_ZOOM // Для плавного зуммирования
         };
         
         // Размер тайла (базовый)
-        this.baseTileSize = 64;
+        this.baseTileSize = GAME_CONFIG.TILE.BASE_SIZE;
 
         // Цвета для рендеринга
         this.colors = {
-            player: '#4a9eff',
-            playerHighlight: '#8ecfff',
-            playerShadow: '#2a5a8f',
-            enemy: '#ff4a4a',
-            enemyWeak: '#a0a0a0',
-            enemyStrong: '#ff6600',
-            enemyFast: '#ffff00',
-            enemyTank: '#8b0000',
-            wall: '#8b7355',
-            wallDark: '#6b5b47',
-            floor: '#3a2d1f',
-            floorLight: '#5a4b3c',
-            grid: '#5a4b3c',
-            treeTrunk: '#5d4037',
-            treeLeaves: '#388e3c',
-            rock: '#795548',
-            water: '#1976d2',
-            ice: '#bbdefb',
-            decoration: '#8bc34a'
+            player: GAME_CONFIG.RENDERER.COLORS.PLAYER,
+            playerHighlight: GAME_CONFIG.RENDERER.COLORS.PLAYER_HIGHLIGHT,
+            playerShadow: GAME_CONFIG.RENDERER.COLORS.PLAYER_SHADOW,
+            enemy: GAME_CONFIG.RENDERER.COLORS.ENEMY,
+            enemyWeak: GAME_CONFIG.RENDERER.COLORS.ENEMY_WEAK,
+            enemyStrong: GAME_CONFIG.RENDERER.COLORS.ENEMY_STRONG,
+            enemyFast: GAME_CONFIG.RENDERER.COLORS.ENEMY_FAST,
+            enemyTank: GAME_CONFIG.RENDERER.COLORS.ENEMY_TANK,
+            wall: GAME_CONFIG.RENDERER.COLORS.WALL,
+            wallDark: GAME_CONFIG.RENDERER.COLORS.WALL_DARK,
+            floor: GAME_CONFIG.RENDERER.COLORS.FLOOR,
+            floorLight: GAME_CONFIG.RENDERER.COLORS.FLOOR_LIGHT,
+            grid: GAME_CONFIG.RENDERER.COLORS.GRID,
+            treeTrunk: GAME_CONFIG.RENDERER.COLORS.TREE_TRUNK,
+            treeLeaves: GAME_CONFIG.RENDERER.COLORS.TREE_LEAVES,
+            rock: GAME_CONFIG.RENDERER.COLORS.ROCK,
+            water: GAME_CONFIG.RENDERER.COLORS.WATER,
+            ice: GAME_CONFIG.RENDERER.COLORS.ICE,
+            decoration: GAME_CONFIG.RENDERER.COLORS.DECORATION
         };
     }
     
@@ -65,7 +65,7 @@ class Renderer {
     updateZoom() {
         // Плавная интерполяция зума
         if (Math.abs(this.camera.zoom - this.camera.targetZoom) > 0.01) {
-            this.camera.zoom += (this.camera.targetZoom - this.camera.zoom) * 0.15;
+            this.camera.zoom += (this.camera.targetZoom - this.camera.zoom) * GAME_CONFIG.CAMERA.ZOOM_SPEED;
         } else {
             this.camera.zoom = this.camera.targetZoom;
         }
@@ -595,22 +595,23 @@ class Renderer {
      * @param {number} y - Y координата экрана
      */
     renderHealthBar(entity, x, y) {
-        const barWidth = 40;
-        const barHeight = 6;
+        const barWidth = GAME_CONFIG.RENDERER.HEALTH_BAR.WIDTH;
+        const barHeight = GAME_CONFIG.RENDERER.HEALTH_BAR.HEIGHT;
         const healthPercent = entity.health / entity.maxHealth;
 
         // Фон полосы здоровья
         this.ctx.fillStyle = '#333';
-        this.ctx.fillRect(x - barWidth / 2, y - 5, barWidth, barHeight);
+        this.ctx.fillRect(x - barWidth / 2, y + GAME_CONFIG.RENDERER.HEALTH_BAR.OFFSET_Y, barWidth, barHeight);
 
         // Заполнение полосы здоровья
-        this.ctx.fillStyle = healthPercent > 0.5 ? '#4CAF50' : healthPercent > 0.25 ? '#FFC107' : '#F44336';
-        this.ctx.fillRect(x - barWidth / 2, y - 5, barWidth * healthPercent, barHeight);
+        this.ctx.fillStyle = healthPercent > GAME_CONFIG.RENDERER.HEALTH_BAR.HEALTH_COLOR_THRESHOLD_HIGH ? '#4CAF50' : 
+                           healthPercent > GAME_CONFIG.RENDERER.HEALTH_BAR.HEALTH_COLOR_THRESHOLD_MEDIUM ? '#FFC107' : '#F44336';
+        this.ctx.fillRect(x - barWidth / 2, y + GAME_CONFIG.RENDERER.HEALTH_BAR.OFFSET_Y, barWidth * healthPercent, barHeight);
 
         // Обводка полосы здоровья
         this.ctx.strokeStyle = '#000';
         this.ctx.lineWidth = 1;
-        this.ctx.strokeRect(x - barWidth / 2, y - 5, barWidth, barHeight);
+        this.ctx.strokeRect(x - barWidth / 2, y + GAME_CONFIG.RENDERER.HEALTH_BAR.OFFSET_Y, barWidth, barHeight);
     }
     
     /**

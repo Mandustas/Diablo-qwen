@@ -9,7 +9,7 @@ class Game {
         this.renderer = new Renderer('gameCanvas');
 
         // Инициализируем систему чанков со связной генерацией карты
-        this.chunkSystem = new ConnectedChunkSystem(16); // Чанки размером 16x16 тайлов
+        this.chunkSystem = new ConnectedChunkSystem(GAME_CONFIG.INITIAL_CHUNK_SIZE); // Чанки размером 16x16 тайлов
 
         // Генерируем стартовый чанк
         this.chunkSystem.loadChunksAround(0, 0);
@@ -229,7 +229,7 @@ class Game {
      * Атака ближайших врагов
      */
     attackNearbyEnemies() {
-        const attackRange = 50; // Радиус атаки
+        const attackRange = GAME_CONFIG.ATTACK.RANGE; // Радиус атаки
 
         for (const enemy of this.enemies) {
             const distance = Math.sqrt(
@@ -243,7 +243,7 @@ class Game {
 
                 // Если враг умер, удаляем его
                 if (!enemy.isAlive()) {
-                    // Добавляем опыт за убийство будет обработан в основном цикле
+                    // Добаваем опыт за убийство будет обработан в основном цикле
                 }
             }
         }
@@ -254,7 +254,7 @@ class Game {
      * @param {string} skillName - название навыка
      */
     useSkillOnNearbyEnemies(skillName) {
-        const skillRange = 80; // Радиус действия навыка
+        const skillRange = GAME_CONFIG.ATTACK.SKILL_RANGE; // Радиус действия навыка
         let usedSkill = false;
 
         for (const enemy of this.enemies) {
@@ -270,7 +270,7 @@ class Game {
                 break; // Используем навык только на одном враге
             }
         }
-        
+
         if (!usedSkill) {
             // Если нет врагов в радиусе, используем навык без цели (например, лечение)
             const result = this.character.useSkill(skillName);
@@ -306,10 +306,10 @@ class Game {
                 Math.pow(this.character.y - clickedEnemy.y, 2)
             );
             
-            if (distance <= 50) { // В радиусе атаки
+            if (distance <= GAME_CONFIG.ATTACK.RANGE) { // В радиусе атаки
                 const damage = this.character.attack(clickedEnemy);
                 console.log(`Атакован враг, нанесено урона: ${damage}`);
-                
+
                 // Если враг умер, удаляем его
                 if (!clickedEnemy.isAlive()) {
                     // Добавляем опыт за убийство будет обработан в основном цикле
@@ -352,8 +352,8 @@ class Game {
         const dy = targetY - this.character.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        if (distance > 5) { // Если расстояние больше 5 пикселей
-            const speed = 6; // Скорость перемещения (увеличена в 2 раза)
+        if (distance > GAME_CONFIG.MOVEMENT.MIN_DISTANCE_TO_TARGET) { // Если расстояние больше 5 пикселей
+            const speed = GAME_CONFIG.PLAYER_SPEED; // Скорость перемещения (увеличена в 2 раза)
             const moveX = (dx / distance) * speed;
             const moveY = (dy / distance) * speed;
 
@@ -385,18 +385,18 @@ class Game {
         // Оптимизация: используем квадрат расстояния для избежания Math.sqrt
         const minDist = this.character.hitboxRadius;
         const minDistSq = minDist * minDist;
-        
+
         for (const enemy of this.enemies) {
             const dx = x - enemy.x;
             const dy = y - enemy.y;
             const distSq = dx * dx + dy * dy;
             const combinedRadius = this.character.hitboxRadius + enemy.hitboxRadius;
-            
+
             if (distSq < combinedRadius * combinedRadius) {
                 return true;
             }
         }
-        
+
         return false;
     }
     
@@ -419,11 +419,11 @@ class Game {
     spawnEnemies() {
         // Рассчитываем количество врагов пропорционально количеству загруженных чанков
         const loadedChunksCount = this.chunkSystem.activeChunks.size;
-        const enemiesToSpawn = Math.max(Math.floor(loadedChunksCount / 2), 2);
+        const enemiesToSpawn = Math.max(Math.floor(loadedChunksCount * GAME_CONFIG.SPAWN.ENEMIES_PER_CHUNK), GAME_CONFIG.SPAWN.MIN_ENEMIES);
 
         // Получаем список всех активных чанков
         const activeChunkKeys = Array.from(this.chunkSystem.activeChunks);
-        
+
         // Перемешиваем чанки для случайного распределения
         this.shuffleArray(activeChunkKeys);
 
@@ -432,7 +432,7 @@ class Game {
             // Выбираем чанк по очереди (равномерное распределение)
             const chunkKey = activeChunkKeys[i % activeChunkKeys.length];
             const [chunkX, chunkY] = chunkKey.split(',').map(Number);
-            
+
             const [x, y] = this.getRandomPositionInChunk(chunkX, chunkY);
             const enemyTypes = ['basic', 'weak', 'strong', 'fast', 'tank'];
             const randomType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
@@ -446,34 +446,34 @@ class Game {
     updateEnemySpawning() {
         // Рассчитываем количество врагов, которое должно быть в игре
         const loadedChunksCount = this.chunkSystem.activeChunks.size;
-        const desiredEnemyCount = Math.max(Math.floor(loadedChunksCount / 2), 3);
-        
+        const desiredEnemyCount = Math.max(Math.floor(loadedChunksCount * GAME_CONFIG.SPAWN.ENEMIES_PER_CHUNK), GAME_CONFIG.SPAWN.MIN_ENEMIES_UPDATE);
+
         // Получаем список всех активных чанков
         const activeChunkKeys = Array.from(this.chunkSystem.activeChunks);
-        
+
         // Если врагов меньше нужного количества, добавляем новых
         if (this.enemies.length < desiredEnemyCount) {
             const enemiesToAdd = desiredEnemyCount - this.enemies.length;
-            
+
             // Перемешиваем для случайного выбора чанка
             this.shuffleArray(activeChunkKeys);
-            
+
             for (let i = 0; i < enemiesToAdd; i++) {
                 // Выбираем случайный чанк из активных
                 const chunkKey = activeChunkKeys[Math.floor(Math.random() * activeChunkKeys.length)];
                 const [chunkX, chunkY] = chunkKey.split(',').map(Number);
-                
+
                 const [x, y] = this.getRandomPositionInChunk(chunkX, chunkY);
                 const enemyTypes = ['basic', 'weak', 'strong', 'fast', 'tank'];
                 const randomType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
-                
+
                 // Проверяем, не слишком ли близко к игроку (больше допустимое расстояние)
                 const distanceToPlayer = Math.sqrt(
                     Math.pow(x - this.character.x, 2) +
                     Math.pow(y - this.character.y, 2)
                 );
-                
-                if (distanceToPlayer > 80) { // Минимальное расстояние от игрока
+
+                if (distanceToPlayer > GAME_CONFIG.SPAWN.PLAYER_SPAWN_DISTANCE_MIN) { // Минимальное расстояние от игрока
                     this.createEnemy(x, y, randomType);
                 }
             }
@@ -561,7 +561,7 @@ class Game {
         if (this.gameState !== 'playing') return;
 
         // Обработка движения персонажа с клавиатуры
-        const speed = 8; // Увеличена скорость в 2 раза
+        const speed = GAME_CONFIG.PLAYER_SPEED; // Увеличена скорость в 2 раза
         let targetX = this.character.x;
         let targetY = this.character.y;
 
@@ -595,7 +595,7 @@ class Game {
         // Обновляем спаун врагов (реже - раз в 60 кадров)
         if (this.updateCounter === undefined) this.updateCounter = 0;
         this.updateCounter++;
-        if (this.updateCounter >= 60) {
+        if (this.updateCounter >= GAME_CONFIG.UPDATE.ENEMY_SPAWN_INTERVAL) {
             this.updateEnemySpawning();
             this.updateCounter = 0;
         }
@@ -751,20 +751,20 @@ class Game {
      */
     getValidSpawnPositionForEnemy() {
         // Попробуем найти подходящую позицию в загруженных чанках, не слишком близко к персонажу
-        for (let attempts = 0; attempts < 1000; attempts++) {
+        for (let attempts = 0; attempts < GAME_CONFIG.ENEMY_SPAWN_ATTEMPTS; attempts++) {
             // Определяем диапазон поиска в пределах загруженных чанков
-            const chunkRange = 3; // Диапазон в чанках от персонажа
+            const chunkRange = GAME_CONFIG.SPAWN.CHUNK_RANGE_FOR_SPAWN; // Диапазон в чанках от персонажа
             const tilesPerChunk = this.chunkSystem.chunkSize;
-            
+
             // Определяем координаты персонажа в системе тайлов, затем в чанках
             const charTilePos = getTileIndex(this.character.x, this.character.y);
             const charChunkX = Math.floor(charTilePos.tileX / tilesPerChunk);
             const charChunkY = Math.floor(charTilePos.tileY / tilesPerChunk);
-            
+
             // Выбираем случайный чанк в диапазоне
             const spawnChunkX = charChunkX + Math.floor(Math.random() * chunkRange * 2) - chunkRange;
             const spawnChunkY = charChunkY + Math.floor(Math.random() * chunkRange * 2) - chunkRange;
-            
+
             // Выбираем случайную позицию в чанке
             const tileX = spawnChunkX * tilesPerChunk + Math.floor(Math.random() * tilesPerChunk);
             const tileY = spawnChunkY * tilesPerChunk + Math.floor(Math.random() * tilesPerChunk);
@@ -779,7 +779,7 @@ class Game {
                     Math.pow(pos.y - this.character.y, 2)
                 );
 
-                if (distanceToPlayer > 100 && distanceToPlayer < 300) { // Минимальное и максимальное расстояние до игрока
+                if (distanceToPlayer > GAME_CONFIG.SPAWN.PLAYER_SPAWN_DISTANCE_MIN && distanceToPlayer < GAME_CONFIG.SPAWN.PLAYER_SPAWN_DISTANCE_MAX) { // Минимальное и максимальное расстояние до игрока
                     return [pos.x, pos.y];
                 }
             }
@@ -787,7 +787,7 @@ class Game {
 
         // Если не удалось найти подходящую позицию, возвращаем позицию подальше от игрока
         const angle = Math.random() * Math.PI * 2;
-        const distance = 200; // Расстояние от игрока
+        const distance = GAME_CONFIG.SPAWN.PLAYER_SPAWN_DISTANCE_DEFAULT; // Расстояние от игрока
         const x = this.character.x + Math.cos(angle) * distance;
         const y = this.character.y + Math.sin(angle) * distance;
         return [x, y];
@@ -799,14 +799,14 @@ class Game {
      */
     handleZoom(e) {
         // Получаем направление прокрутки
-        const zoomDelta = e.deltaY > 0 ? -0.3 : 0.3;
-        
+        const zoomDelta = e.deltaY > 0 ? -GAME_CONFIG.CAMERA.ZOOM_DELTA_ON_WHEEL : GAME_CONFIG.CAMERA.ZOOM_DELTA_ON_WHEEL;
+
         // Вычисляем новый зум
         const newZoom = this.renderer.camera.targetZoom + zoomDelta;
-        
+
         // Применяем зум с ограничениями
         this.renderer.camera.targetZoom = Math.max(
-            this.renderer.camera.minZoom, 
+            this.renderer.camera.minZoom,
             Math.min(this.renderer.camera.maxZoom, newZoom)
         );
     }
