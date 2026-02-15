@@ -8,20 +8,20 @@ class Game {
     constructor() {
         this.renderer = new Renderer('gameCanvas');
 
-        // Инициализируем систему чанков для бесконечной генерации
-        this.chunkSystem = new ChunkSystem(16); // Чанки размером 16x16 тайлов
+        // Инициализируем систему чанков со связной генерацией карты
+        this.chunkSystem = new ConnectedChunkSystem(16); // Чанки размером 16x16 тайлов
 
         // Генерируем стартовый чанк
-        this.chunkSystem.loadChunksAround(0, 0); // Используем стандартные радиусы
+        this.chunkSystem.loadChunksAround(0, 0);
 
         // Создаем персонажа в центре стартового чанка
         const startPos = this.getValidSpawnPosition();
-        this.character = new Character(startPos.x, startPos.y); // Начальная позиция персонажа
+        this.character = new Character(startPos.x, startPos.y);
 
         this.enemies = [];
 
         // Состояние игры
-        this.gameState = 'playing'; // 'playing', 'paused', 'gameOver'
+        this.gameState = 'playing';
 
         // Управление
         this.keys = {};
@@ -42,7 +42,8 @@ class Game {
         this.saveSystem = new SaveSystem(this);
 
         // Загружаем чанки вокруг персонажа
-        this.chunkSystem.loadChunksAround(this.character.x, this.character.y);
+        const spawnTilePos = getTileIndex(this.character.x, this.character.y);
+        this.chunkSystem.loadChunksAround(spawnTilePos.tileX, spawnTilePos.tileY);
 
         // Создаем врагов в стартовой области
         this.spawnEnemies();
@@ -528,8 +529,9 @@ class Game {
         // Центрируем камеру на персонаже
         this.renderer.centerCameraOnCharacter(this.character);
 
-        // Загружаем новые чанки при движении персонажа
-        this.chunkSystem.loadChunksAround(this.character.x, this.character.y);
+        // Загружаем новые чанки при движении персонажа (конвертируем пиксельные координаты в тайловые)
+        const currentTilePos = getTileIndex(this.character.x, this.character.y);
+        this.chunkSystem.loadChunksAround(currentTilePos.tileX, currentTilePos.tileY);
 
         // Обновляем спаун врагов
         this.updateEnemySpawning();
@@ -690,9 +692,10 @@ class Game {
             const chunkRange = 3; // Диапазон в чанках от персонажа
             const tilesPerChunk = this.chunkSystem.chunkSize;
             
-            // Определяем координаты персонажа в системе чанков
-            const charChunkX = Math.floor(this.character.x / tilesPerChunk);
-            const charChunkY = Math.floor(this.character.y / tilesPerChunk);
+            // Определяем координаты персонажа в системе тайлов, затем в чанках
+            const charTilePos = getTileIndex(this.character.x, this.character.y);
+            const charChunkX = Math.floor(charTilePos.tileX / tilesPerChunk);
+            const charChunkY = Math.floor(charTilePos.tileY / tilesPerChunk);
             
             // Выбираем случайный чанк в диапазоне
             const spawnChunkX = charChunkX + Math.floor(Math.random() * chunkRange * 2) - chunkRange;

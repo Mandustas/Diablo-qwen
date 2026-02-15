@@ -50,8 +50,8 @@ class ChunkSystem {
         this.generator = new AdvancedDungeonGenerator(chunkSize, chunkSize);
         
         // Радиусы для загрузки и выгрузки чанков
-        this.loadRadius = 5; // Загружаем чанки в радиусе 5 от игрока
-        this.unloadRadius = 7; // Выгружаем чанки за пределами радиуса 7
+        this.loadRadius = 8; // Загружаем чанки в радиусе 8 от игрока (с запасом за пределами экрана)
+        this.unloadRadius = 12; // Выгружаем чанки за пределами радиуса 12 (далеко за пределами видимости)
     }
 
     getChunkKey(chunkX, chunkY) {
@@ -147,18 +147,24 @@ class ChunkSystem {
     }
 
     getChunksToRender(cameraX, cameraY, screenWidth, screenHeight, tileSize = 64) {
-        // Определяем центральные координаты камеры в системе чанков
-        const centerChunkX = Math.floor((cameraX + screenWidth/2) / (this.chunkSize * tileSize / 2));
-        const centerChunkY = Math.floor((cameraY + screenHeight/2) / (this.chunkSize * tileSize / 4));
+        // Определяем центр экрана в пиксельных координатах мира
+        const centerWorldX = cameraX + screenWidth / 2;
+        const centerWorldY = cameraY + screenHeight / 2;
         
-        // Рассчитываем приблизительное количество чанков, которые могут поместиться на экране
-        // с учетом запаса для плавности отображения
-        const renderRadius = Math.max(3, Math.ceil(screenWidth / (this.chunkSize * tileSize / 2)), 
-                                              Math.ceil(screenHeight / (this.chunkSize * tileSize / 4))) + 1;
+        // Конвертируем пиксельные координаты центра экрана в тайловые координаты
+        const isoCoords = coordToIso(centerWorldX, centerWorldY);
+        const centerChunkX = Math.floor(isoCoords.isoX / this.chunkSize);
+        const centerChunkY = Math.floor(isoCoords.isoY / this.chunkSize);
+        
+        // Рассчитываем радиус рендеринга с запасом, чтобы покрыть весь экран
+        // Учитываем изометрическую проекцию — экран покрывает больше чанков по диагонали
+        const tilesOnScreenX = Math.ceil(screenWidth / (tileSize / 2));
+        const tilesOnScreenY = Math.ceil(screenHeight / (tileSize / 4));
+        const renderRadius = Math.max(3, Math.ceil(Math.max(tilesOnScreenX, tilesOnScreenY) / this.chunkSize)) + 2;
         
         const chunksToRender = [];
         
-        // Загружаем чанки в радиусе от центрального чанка
+        // Собираем чанки в радиусе от центрального чанка
         for (let chunkX = centerChunkX - renderRadius; chunkX <= centerChunkX + renderRadius; chunkX++) {
             for (let chunkY = centerChunkY - renderRadius; chunkY <= centerChunkY + renderRadius; chunkY++) {
                 const chunkKey = this.getChunkKey(chunkX, chunkY);
