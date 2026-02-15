@@ -225,17 +225,36 @@ class Character {
         this.level++;
         this.experience -= this.experienceForNextLevel;
         this.experienceForNextLevel = Math.floor(this.experienceForNextLevel * 1.5); // Увеличиваем требуемый опыт
-        
+
         // Увеличиваем характеристики
         this.maxHealth += 20;
         this.health = this.maxHealth;
+        this.maxMana += 10; // Увеличиваем максимальную ману
+        this.mana = this.maxMana; // Восстанавливаем ману при повышении уровня
         this.strength += 2;
         this.dexterity += 2;
         this.vitality += 2;
         this.energy += 1;
-        
+
+        // Добавляем очко навыков за каждый уровень
+        this.gainSkillPoint();
+
         // Обновляем UI
+        document.getElementById('levelValue').textContent = this.level;
         document.getElementById('healthValue').textContent = this.health;
+    }
+    
+    /**
+     * Получение очков навыков (при повышении уровня)
+     */
+    gainSkillPoint() {
+        this.skillPoints++;
+        console.log(`Получено очко навыков. Всего доступно: ${this.skillPoints}`);
+        
+        // Обновляем UI дерева навыков
+        if (window.game && window.game.skillTree) {
+            window.game.skillTree.onCharacterUpdate();
+        }
     }
     
     /**
@@ -581,15 +600,6 @@ class Character {
     }
     
     /**
-     * Получение очков навыков (при повышении уровня)
-     */
-    gainSkillPoint() {
-        this.skillPoints++;
-        console.log(`Получено очко навыков. Всего доступно: ${this.skillPoints}`);
-    }
-    
-    
-    /**
      * Проверка коллизии с другим объектом
      * @param {Object} other - другой объект с x, y и hitboxRadius
      * @returns {boolean} - произошла ли коллизия
@@ -633,34 +643,6 @@ class Character {
         return 1 + this.getTotalStat('energy') * 0.1;
     }
     
-    /**
-     * Повышение уровня (переопределяем родительский метод)
-     */
-    levelUp() {
-        // Повышаем уровень
-        this.level++;
-        this.experience -= this.experienceForNextLevel;
-        this.experienceForNextLevel = Math.floor(this.experienceForNextLevel * 1.5); // Увеличиваем требуемый опыт
-
-        // Увеличиваем характеристики
-        this.maxHealth += 20;
-        this.health = this.maxHealth;
-        this.maxMana += 10; // Увеличиваем максимальную ману
-        this.mana = this.maxMana; // Восстанавливаем ману при повышении уровня
-        this.strength += 2;
-        this.dexterity += 2;
-        this.vitality += 2;
-        this.energy += 1;
-
-        // Добавляем очко навыков за каждый 3 уровень
-        if (this.level % 3 === 0) {
-            this.gainSkillPoint();
-        }
-
-        // Обновляем UI
-        document.getElementById('levelValue').textContent = this.level;
-    }
-
     /**
      * Восстановление маны с течением времени
      */
