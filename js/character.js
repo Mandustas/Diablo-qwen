@@ -262,7 +262,160 @@ class Character {
      */
     onDeath() {
         console.log('Персонаж умер!');
-        // Здесь можно добавить логику смерти (например, телепорт к ближайшему городу)
+        
+        // Создаем устрашающее сообщение о смерти
+        this.showDeathScreen();
+    }
+    
+    /**
+     * Показ экрана смерти
+     */
+    showDeathScreen() {
+        // Создаем контейнер экрана смерти
+        const deathOverlay = document.createElement('div');
+        deathOverlay.id = 'deathOverlay';
+        deathOverlay.style.position = 'fixed';
+        deathOverlay.style.top = '0';
+        deathOverlay.style.left = '0';
+        deathOverlay.style.width = '100%';
+        deathOverlay.style.height = '100%';
+        deathOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0)';
+        deathOverlay.style.display = 'flex';
+        deathOverlay.style.flexDirection = 'column';
+        deathOverlay.style.justifyContent = 'center';
+        deathOverlay.style.alignItems = 'center';
+        deathOverlay.style.zIndex = '9999';
+        deathOverlay.style.pointerEvents = 'none';
+        deathOverlay.style.transition = 'background-color 1s ease-in';
+        
+        // Текст смерти
+        const deathText = document.createElement('div');
+        deathText.innerHTML = 'ВЫ ПОГИБЛИ';
+        deathText.style.fontFamily = "'MedievalSharp', Georgia, serif";
+        deathText.style.fontSize = '72px';
+        deathText.style.color = '#8b0000';
+        deathText.style.textShadow = '0 0 20px #ff0000, 0 0 40px #8b0000, 3px 3px 6px #000';
+        deathText.style.letterSpacing = '10px';
+        deathText.style.textTransform = 'uppercase';
+        deathText.style.opacity = '0';
+        deathText.style.transform = 'scale(0.5)';
+        deathText.style.transition = 'all 1s ease-out';
+        deathText.style.animation = 'none';
+        
+        // Подтекст
+        const deathSubtext = document.createElement('div');
+        deathSubtext.innerHTML = 'Тьма поглотила вашу душу...';
+        deathSubtext.style.fontFamily = "'MedievalSharp', Georgia, serif";
+        deathSubtext.style.fontSize = '24px';
+        deathSubtext.style.color = '#666';
+        deathSubtext.style.marginTop = '30px';
+        deathSubtext.style.opacity = '0';
+        deathSubtext.style.transition = 'opacity 1s ease-in 0.5s';
+        
+        // Кнопка возрождения
+        const respawnButton = document.createElement('button');
+        respawnButton.innerHTML = 'ВОЗРОДИТЬСЯ';
+        respawnButton.style.fontFamily = "'MedievalSharp', Georgia, serif";
+        respawnButton.style.fontSize = '20px';
+        respawnButton.style.color = '#c9b896';
+        respawnButton.style.background = 'linear-gradient(to bottom, #2a1a1a 0%, #1a0f0f 100%)';
+        respawnButton.style.border = '2px solid #4a3a2a';
+        respawnButton.style.padding = '15px 40px';
+        respawnButton.style.marginTop = '50px';
+        respawnButton.style.cursor = 'pointer';
+        respawnButton.style.opacity = '0';
+        respawnButton.style.transform = 'translateY(20px)';
+        respawnButton.style.transition = 'all 0.5s ease-out 1.5s';
+        respawnButton.style.pointerEvents = 'auto';
+        
+        // Добавляем эффекты при наведении
+        respawnButton.addEventListener('mouseenter', () => {
+            respawnButton.style.background = 'linear-gradient(to bottom, #3a2a2a 0%, #2a1a1a 100%)';
+            respawnButton.style.borderColor = '#6a5a4a';
+            respawnButton.style.color = '#fff';
+        });
+        
+        respawnButton.addEventListener('mouseleave', () => {
+            respawnButton.style.background = 'linear-gradient(to bottom, #2a1a1a 0%, #1a0f0f 100%)';
+            respawnButton.style.borderColor = '#4a3a2a';
+            respawnButton.style.color = '#c9b896';
+        });
+        
+        // Обработчик возрождения
+        respawnButton.addEventListener('click', () => {
+            this.respawn();
+            document.body.removeChild(deathOverlay);
+        });
+        
+        deathOverlay.appendChild(deathText);
+        deathOverlay.appendChild(deathSubtext);
+        deathOverlay.appendChild(respawnButton);
+        document.body.appendChild(deathOverlay);
+        
+        // Запускаем анимацию
+        setTimeout(() => {
+            deathOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.95)';
+        }, 100);
+        
+        setTimeout(() => {
+            deathText.style.opacity = '1';
+            deathText.style.transform = 'scale(1)';
+            deathText.style.animation = 'deathPulse 2s ease-in-out infinite';
+        }, 500);
+        
+        setTimeout(() => {
+            deathSubtext.style.opacity = '1';
+        }, 1000);
+        
+        setTimeout(() => {
+            respawnButton.style.opacity = '1';
+            respawnButton.style.transform = 'translateY(0)';
+        }, 1500);
+        
+        // Добавляем CSS анимацию
+        if (!document.getElementById('deathAnimation')) {
+            const style = document.createElement('style');
+            style.id = 'deathAnimation';
+            style.innerHTML = `
+                @keyframes deathPulse {
+                    0%, 100% { 
+                        text-shadow: 0 0 20px #ff0000, 0 0 40px #8b0000, 3px 3px 6px #000;
+                        transform: scale(1);
+                    }
+                    50% { 
+                        text-shadow: 0 0 40px #ff0000, 0 0 80px #8b0000, 3px 3px 6px #000;
+                        transform: scale(1.05);
+                    }
+                }
+                @keyframes screenShake {
+                    0%, 100% { transform: translateX(0); }
+                    25% { transform: translateX(-5px); }
+                    75% { transform: translateX(5px); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+    
+    /**
+     * Возрождение персонажа
+     */
+    respawn() {
+        // Восстанавливаем здоровье
+        this.health = this.maxHealth;
+        this.mana = this.maxMana;
+        
+        // Телепортируем в безопасное место (центр карты)
+        this.x = 0;
+        this.y = 0;
+        this.updateIsoCoords();
+        
+        console.log('Персонаж возрожден!');
+        
+        // Если есть игра, обновляем позицию
+        if (window.game) {
+            window.game.character.setPosition(0, 0);
+        }
     }
     
     /**

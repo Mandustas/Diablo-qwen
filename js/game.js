@@ -78,6 +78,13 @@ class Game {
         window.addEventListener('keydown', (e) => {
             this.keys[e.key.toLowerCase()] = true;
 
+            // ESC - открыть/закрыть меню паузы
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                this.togglePauseMenu();
+                return;
+            }
+
             // Дополнительные действия по клавишам
             if (e.key === ' ') {
                 e.preventDefault(); // Предотвращаем прокрутку страницы
@@ -156,6 +163,31 @@ class Game {
         document.getElementById('loadButton').addEventListener('click', () => {
             this.saveSystem.loadGame();
         });
+        
+        // Обработка кнопок меню паузы
+        document.getElementById('resumeButton').addEventListener('click', () => {
+            this.togglePauseMenu();
+        });
+        
+        document.getElementById('exitButton').addEventListener('click', () => {
+            // Выход в главное меню (перезагрузка страницы)
+            location.reload();
+        });
+    }
+    
+    /**
+     * Переключение меню паузы
+     */
+    togglePauseMenu() {
+        const pauseMenu = document.getElementById('pauseMenu');
+        
+        if (this.gameState === 'playing') {
+            this.gameState = 'paused';
+            pauseMenu.classList.add('active');
+        } else {
+            this.gameState = 'playing';
+            pauseMenu.classList.remove('active');
+        }
     }
     
     /**
