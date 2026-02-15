@@ -16,14 +16,22 @@ class Enemy {
         this.detectionRange = this.stats.detectionRange;
         this.attackRange = this.stats.attackRange;
         this.attackCooldown = 0;
-        this.maxAttackCooldown = 60; // 60 тиков между атаками
+        this.maxAttackCooldown = 45; // 45 тиков между атаками (быстрее атакуют)
         
         // Хитбокс
         this.hitboxRadius = 15; // Радиус хитбокса врага
         
         // Состояние врага
-        this.state = 'idle'; // idle, chasing, attacking
+        this.state = 'idle'; // idle, chasing, attacking, wandering
         this.target = null; // цель для преследования
+        
+        // Параметры для имитации жизнедеятельности (блуждание)
+        this.wanderTarget = null;
+        this.wanderTimer = 0;
+        this.wanderInterval = 120 + Math.random() * 180; // 2-5 секунд блуждания
+        this.idleAnimTimer = 0;
+        this.lastX = x;
+        this.lastY = y;
     }
     
     /**
@@ -94,6 +102,13 @@ class Enemy {
             this.attackCooldown--;
         }
 
+        // Обновляем таймер анимации
+        this.idleAnimTimer++;
+        
+        // Запоминаем последнюю позицию
+        this.lastX = this.x;
+        this.lastY = this.y;
+
         // Проверяем расстояние до игрока
         const distanceToPlayer = Math.sqrt(
             Math.pow(this.x - player.x, 2) +
@@ -101,9 +116,11 @@ class Enemy {
         );
 
         if (distanceToPlayer <= this.detectionRange) {
-            // Игрок в зоне обнаружения
+            // Игрок в зоне обнаружения - переходим в режим преследования
             this.state = 'chasing';
             this.target = player;
+            this.wanderTimer = 0; // Сбрасываем таймер блуждания
+            this.wanderTarget = null;
 
             // Двигаемся к игроку
             this.moveToTarget(player, map, chunkSystem);
@@ -114,9 +131,84 @@ class Enemy {
                 this.attack(player);
             }
         } else {
-            // Игрок вне зоны обнаружения
-            this.state = 'idle';
+            // Игрок вне зоны обнаружения - имитируем жизнедеятельность
             this.target = null;
+            this.performIdleBehavior(map, chunkSystem);
+        }
+    }
+    
+    /**
+     * Имитация жизнедеятельности (блуждание)
+     * @param {Array<Array<number>>} map - карта
+     * @param {ChunkSystem} chunkSystem - система чанков
+     */
+    performIdleBehavior(map, chunkSystem) {
+        this.wanderTimer++;
+        
+        // Каждые 2-5 секунд выбираем новую цель для блуждания
+        if (this.wanderTimer >= this.wanderInterval || !this.wanderTarget) {
+            // Выбираем случайную точку для блуждания
+            const wanderDistance = 30 + Math.random() * 70; // 30-100 пикселей
+            const wanderAngle = Math.random() * Math.PI * 2;
+            
+            this.wanderTarget = {
+                x: this.x + Math.cos(wanderAngle) * wanderDistance,
+                y: this.y + Math.sin(wanderAngle) * wanderDistance
+            };
+            
+            // Сбрасываем таймер и интервал
+            this.wanderTimer = 0;
+            this.wanderInterval = 120 + Math.random() * 180; // 2-5 секунд
+        }
+        
+        // Если есть цель для блуждания, двигаемся к ней
+        if (this.wanderTarget) {
+            this.state = 'wandering';
+            
+            const dx = this.wanderTarget.x - this.x;
+            const dy = this.wanderTarget.y - this.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Если достигли цели или близко к ней
+            if (distance < 10) {
+                this.wanderTarget = null;
+                this.wanderTimer = 0;
+            } else {
+                // Двигаемся к цели блуждания (медленнее, чем к игроку)
+                const wanderSpeed = this.speed * 0.5; // Половина обычной скорости
+                const moveX = (dx / distance) * wanderSpeed;
+                const moveY = (dy / distance) * wanderSpeed;
+                
+                const newX = this.x + moveX;
+                const newY = this.y + moveY;
+                
+                // Проверяем проходимость
+                let tilePos;
+                if (typeof getTileIndex !== 'undefined') {
+                    tilePos = getTileIndex(newX, newY);
+                } else {
+                    tilePos = { tileX: Math.floor(newX / 64), tileY: Math.floor(newY / 32) };
+                }
+                
+                let canMove = false;
+                if (map) {
+                    canMove = this.isPassable(tilePos.tileX, tilePos.tileY, map);
+                } else if (chunkSystem) {
+                    canMove = chunkSystem.isPassable(tilePos.tileX, tilePos.tileY);
+                }
+                
+                if (canMove) {
+                    this.x = newX;
+                    this.y = newY;
+                } else {
+                    // Если не можем пройти, выбираем новую цель
+                    this.wanderTarget = null;
+                    this.wanderTimer = 0;
+                }
+            }
+        } else {
+            // Просто стоим и "дышим" (состояние idle)
+            this.state = 'idle';
         }
     }
     
@@ -318,10 +410,11 @@ class Enemy {
     checkCollisionWith(other) {
         const dx = this.x - other.x;
         const dy = this.y - other.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        const distSq = dx * dx + dy * dy;
+        const combinedRadius = this.hitboxRadius + other.hitboxRadius;
         
-        // Коллизия происходит, если расстояние меньше суммы радиусов
-        return distance < (this.hitboxRadius + other.hitboxRadius);
+        // Коллизия происходит, если квадрат расстояния меньше квадрата суммы радиусов
+        return distSq < combinedRadius * combinedRadius;
     }
     
 }

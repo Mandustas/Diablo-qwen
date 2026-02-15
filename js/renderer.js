@@ -1,11 +1,13 @@
 class Renderer {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
-        this.ctx = this.canvas.getContext('2d');
+        this.ctx = this.canvas.getContext('2d', { alpha: false }); // Alpha false for performance
         this.camera = {
             x: 0,
             y: 0,
-            zoom: 1
+            zoom: 1.5, // Увеличенный зум для отображения меньшего количества объектов
+            minZoom: 0.5,
+            maxZoom: 3.0
         };
 
         // Цвета для рендеринга
@@ -31,6 +33,7 @@ class Renderer {
             decoration: '#8bc34a'
         };
     }
+    
     
     /**
      * Установка позиции камеры

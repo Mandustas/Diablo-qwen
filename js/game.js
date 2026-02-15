@@ -307,7 +307,7 @@ class Game {
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance > 5) { // Если расстояние больше 5 пикселей
-            const speed = 3; // Скорость перемещения
+            const speed = 6; // Скорость перемещения (увеличена в 2 раза)
             const moveX = (dx / distance) * speed;
             const moveY = (dy / distance) * speed;
 
@@ -336,28 +336,22 @@ class Game {
      * @returns {boolean} - есть ли коллизия
      */
     checkCharacterEnemyCollision(x, y) {
-        // Создаем временный объект для проверки коллизии
-        const tempChar = {
-            x: x,
-            y: y,
-            hitboxRadius: this.character.hitboxRadius,
-            checkCollisionWith: function(other) {
-                const dx = this.x - other.x;
-                const dy = this.y - other.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                // Коллизия происходит, если расстояние меньше суммы радиусов
-                return distance < (this.hitboxRadius + other.hitboxRadius);
-            }
-        };
+        // Оптимизация: используем квадрат расстояния для избежания Math.sqrt
+        const minDist = this.character.hitboxRadius;
+        const minDistSq = minDist * minDist;
         
         for (const enemy of this.enemies) {
-            if (tempChar.checkCollisionWith(enemy)) {
-                return true; // Обнаружена коллизия
+            const dx = x - enemy.x;
+            const dy = y - enemy.y;
+            const distSq = dx * dx + dy * dy;
+            const combinedRadius = this.character.hitboxRadius + enemy.hitboxRadius;
+            
+            if (distSq < combinedRadius * combinedRadius) {
+                return true;
             }
         }
         
-        return false; // Коллизий нет
+        return false;
     }
     
     /**
@@ -521,86 +515,51 @@ class Game {
         if (this.gameState !== 'playing') return;
 
         // Обработка движения персонажа с клавиатуры
-        const speed = 3;
-        let moved = false;
+        const speed = 8; // Увеличена скорость в 2 раза
+        let targetX = this.character.x;
+        let targetY = this.character.y;
 
-        if (this.keys['w'] || this.keys['ц']) {
-            // Проверяем, можно ли двигаться вверх
-            const targetY = this.character.y - speed;
-            let tilePos;
-            if (typeof getTileIndex !== 'undefined') {
-                tilePos = getTileIndex(this.character.x, targetY);
-            } else {
-                // Резервный вариант, если функция недоступна
-                tilePos = { tileX: Math.floor(this.character.x / 64), tileY: Math.floor(targetY / 32) };
-            }
-            if (this.isPassable(tilePos.tileX, tilePos.tileY) && !this.checkCharacterEnemyCollision(this.character.x, targetY)) {
-                this.character.move(0, -speed);
-                moved = true;
-            }
-        }
-        if (this.keys['s'] || this.keys['ы']) {
-            // Проверяем, можно ли двигаться вниз
-            const targetY = this.character.y + speed;
-            let tilePos;
-            if (typeof getTileIndex !== 'undefined') {
-                tilePos = getTileIndex(this.character.x, targetY);
-            } else {
-                // Резервный вариант, если функция недоступна
-                tilePos = { tileX: Math.floor(this.character.x / 64), tileY: Math.floor(targetY / 32) };
-            }
-            if (this.isPassable(tilePos.tileX, tilePos.tileY) && !this.checkCharacterEnemyCollision(this.character.x, targetY)) {
-                this.character.move(0, speed);
-                moved = true;
-            }
-        }
-        if (this.keys['a'] || this.keys['ф']) {
-            // Проверяем, можно ли двигаться влево
-            const targetX = this.character.x - speed;
-            let tilePos;
-            if (typeof getTileIndex !== 'undefined') {
-                tilePos = getTileIndex(targetX, this.character.y);
-            } else {
-                // Резервный вариант, если функция недоступна
-                tilePos = { tileX: Math.floor(targetX / 64), tileY: Math.floor(this.character.y / 32) };
-            }
-            if (this.isPassable(tilePos.tileX, tilePos.tileY) && !this.checkCharacterEnemyCollision(targetX, this.character.y)) {
-                this.character.move(-speed, 0);
-                moved = true;
-            }
-        }
-        if (this.keys['d'] || this.keys['в']) {
-            // Проверяем, можно ли двигаться вправо
-            const targetX = this.character.x + speed;
-            let tilePos;
-            if (typeof getTileIndex !== 'undefined') {
-                tilePos = getTileIndex(targetX, this.character.y);
-            } else {
-                // Резервный вариант, если функция недоступна
-                tilePos = { tileX: Math.floor(targetX / 64), tileY: Math.floor(this.character.y / 32) };
-            }
-            if (this.isPassable(tilePos.tileX, tilePos.tileY) && !this.checkCharacterEnemyCollision(targetX, this.character.y)) {
-                this.character.move(speed, 0);
-                moved = true;
+        if (this.keys['w'] || this.keys['ц']) targetY -= speed;
+        if (this.keys['s'] || this.keys['ы']) targetY += speed;
+        if (this.keys['a'] || this.keys['ф']) targetX -= speed;
+        if (this.keys['d'] || this.keys['в']) targetX += speed;
+
+        // Двигаем персонажа только если есть ввод
+        if (targetX !== this.character.x || targetY !== this.character.y) {
+            let tilePos = getTileIndex(targetX, targetY);
+            if (this.isPassable(tilePos.tileX, tilePos.tileY)) {
+                this.character.move(targetX - this.character.x, targetY - this.character.y);
             }
         }
 
         // Центрируем камеру на персонаже
         this.renderer.centerCameraOnCharacter(this.character);
 
-        // Загружаем новые чанки при движении персонажа (конвертируем пиксельные координаты в тайловые)
+        // Загружаем новые чанки только при переходе в новый чанк
         const currentTilePos = getTileIndex(this.character.x, this.character.y);
-        this.chunkSystem.loadChunksAround(currentTilePos.tileX, currentTilePos.tileY);
+        const currentChunkX = Math.floor(currentTilePos.tileX / this.chunkSystem.chunkSize);
+        const currentChunkY = Math.floor(currentTilePos.tileY / this.chunkSystem.chunkSize);
+        
+        if (this.lastChunkX !== currentChunkX || this.lastChunkY !== currentChunkY) {
+            this.lastChunkX = currentChunkX;
+            this.lastChunkY = currentChunkY;
+            this.chunkSystem.loadChunksAround(currentTilePos.tileX, currentTilePos.tileY);
+        }
 
-        // Обновляем спаун врагов
-        this.updateEnemySpawning();
+        // Обновляем спаун врагов (реже - раз в 60 кадров)
+        if (this.updateCounter === undefined) this.updateCounter = 0;
+        this.updateCounter++;
+        if (this.updateCounter >= 60) {
+            this.updateEnemySpawning();
+            this.updateCounter = 0;
+        }
 
         // Обновляем врагов
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             const enemy = this.enemies[i];
 
             // Обновляем состояние врага
-            enemy.update(this.character, null, this.chunkSystem); // Передаем chunkSystem для проверки проходимости
+            enemy.update(this.character, null, this.chunkSystem);
 
             // Проверяем коллизии с другими врагами и персонажем
             this.handleEnemyCollisions(enemy);
@@ -611,7 +570,7 @@ class Game {
                 this.character.gainExperience(enemy.stats.maxHealth / 2);
 
                 // Добавляем случайный предмет
-                if (Math.random() < 0.3) { // 30% шанс получить предмет
+                if (Math.random() < 0.3) {
                     this.dropRandomItem(enemy.x, enemy.y);
                 }
 
@@ -623,7 +582,7 @@ class Game {
         // Обновляем восстановление маны
         this.character.regenerateMana();
 
-        // Обновляем UI
+        // Обновляем UI каждый кадр для отзывчивости
         this.updateCharacterUI();
     }
     

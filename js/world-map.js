@@ -350,9 +350,13 @@ class ConnectedChunkSystem {
         this.activeChunks = new Set();
         this.worldMap = new WorldMap();
         
-        // Радиусы загрузки
-        this.loadRadius = 6;
-        this.unloadRadius = 10;
+        // Радиусы загрузки (уменьшены для производительности)
+        this.loadRadius = 4;
+        this.unloadRadius = 6;
+        
+        // Кэш для позиции последней загрузки чанков
+        this.lastLoadX = null;
+        this.lastLoadY = null;
         
         // Текущая область генерации
         this.currentCenterX = 0;
