@@ -96,19 +96,133 @@ class SkillBar {
         
         this.manaPanel.appendChild(this.manaBarContainer);
         
+        // Создаем контейнер для панели навыков и полоски опыта
+        this.skillAndExpContainer = document.createElement('div');
+        this.skillAndExpContainer.style.display = 'flex';
+        this.skillAndExpContainer.style.flexDirection = 'column';
+        this.skillAndExpContainer.style.alignItems = 'center';
+        this.skillAndExpContainer.style.gap = '5px';
+
+        // Добавляем панель навыков
+        this.skillAndExpContainer.appendChild(this.skillBarWrapper);
+
+        // Добавляем полоску опыта под панелью навыков
+        this.createExperienceBar();
+        this.skillAndExpContainer.appendChild(this.expBarContainer);
+
         // Собираем все вместе
         this.bottomContainer.appendChild(this.healthPanel);
-        this.bottomContainer.appendChild(this.skillBarWrapper);
+        this.bottomContainer.appendChild(this.skillAndExpContainer);
         this.bottomContainer.appendChild(this.manaPanel);
-        
+
         document.body.appendChild(this.bottomContainer);
-        
+
         // Сохраняем ссылки на SVG круги
         this.healthCircle = this.healthBarContainer.querySelector('#healthCircle');
         this.manaCircle = this.manaBarContainer.querySelector('#manaCircle');
-        
+
         // Обновляем начальное отображение
         this.updateHealthManaDisplay();
+    }
+
+    /**
+     * Создание полоски опыта под панелью навыков
+     */
+    createExperienceBar() {
+        // Контейнер для полоски опыта
+        this.expBarContainer = document.createElement('div');
+        this.expBarContainer.id = 'experienceBar';
+        this.expBarContainer.style.width = (9 * GAME_CONFIG.UI.SKILL_BAR.SLOT_WIDTH + 8 * GAME_CONFIG.UI.SKILL_BAR.SLOT_GAP + 2 * GAME_CONFIG.UI.SKILL_BAR.BAR_PADDING) + 'px';
+        this.expBarContainer.style.marginTop = '5px';
+        this.expBarContainer.style.textAlign = 'center';
+
+        // Основной контейнер полоски опыта (внешняя рамка в стиле Diablo)
+        this.expBarOuter = document.createElement('div');
+        this.expBarOuter.style.width = '100%';
+        this.expBarOuter.style.height = '16px';
+        this.expBarOuter.style.backgroundColor = '#0d0a0a'; // Темный фон как в Diablo
+        this.expBarOuter.style.border = '1px solid #3a2a1a'; // Темно-коричневая рамка
+        this.expBarOuter.style.borderRadius = '2px';
+        this.expBarOuter.style.position = 'relative';
+        this.expBarOuter.style.overflow = 'hidden';
+        this.expBarOuter.style.boxShadow = 'inset 0 0 5px rgba(0,0,0,0.7)';
+
+        // Внутренняя рамка полоски опыта
+        this.expBarInnerFrame = document.createElement('div');
+        this.expBarInnerFrame.style.width = 'calc(100% - 2px)';
+        this.expBarInnerFrame.style.height = 'calc(100% - 2px)';
+        this.expBarInnerFrame.style.margin = '1px';
+        this.expBarInnerFrame.style.backgroundColor = '#1a1414'; // Ещё темнее внутри
+        this.expBarInnerFrame.style.border = '1px solid #2a2424';
+        this.expBarInnerFrame.style.borderRadius = '1px';
+        this.expBarInnerFrame.style.position = 'relative';
+        this.expBarInnerFrame.style.overflow = 'hidden';
+
+        // Внутренняя часть полоски опыта (сам прогресс)
+        this.expBarInner = document.createElement('div');
+        this.expBarInner.style.height = '100%';
+        this.expBarInner.style.width = '0%';
+        this.expBarInner.style.background = 'linear-gradient(to bottom, #5d9c5d 0%, #4CAF50 50%, #3d8b3d 100%)'; // Зеленый градиент как в Diablo
+        this.expBarInner.style.borderRadius = '1px';
+        this.expBarInner.style.transition = 'width 0.3s ease';
+
+        // Текст с процентом опыта
+        this.expText = document.createElement('div');
+        this.expText.id = 'expText';
+        this.expText.style.position = 'absolute';
+        this.expText.style.top = '50%';
+        this.expText.style.left = '50%';
+        this.expText.style.transform = 'translate(-50%, -50%)';
+        this.expText.style.color = '#f0e6d2';
+        this.expText.style.fontSize = '10px';
+        this.expText.style.fontWeight = 'bold';
+        this.expText.style.textShadow = '1px 1px 1px #000';
+        this.expText.style.fontFamily = "'MedievalSharp', Georgia, serif";
+        this.expText.style.pointerEvents = 'none'; // Чтобы не мешал кликам
+
+        this.expBarInnerFrame.appendChild(this.expBarInner);
+        this.expBarInnerFrame.appendChild(this.expText);
+        this.expBarOuter.appendChild(this.expBarInnerFrame);
+        this.expBarContainer.appendChild(this.expBarOuter);
+
+        // Добавляем контейнер после основного контейнера
+        this.bottomContainer.appendChild(this.expBarContainer);
+
+        // Обновляем отображение
+        this.updateExperienceBar();
+    }
+
+    /**
+     * Обновление полоски опыта
+     */
+    updateExperienceBar() {
+        if (!this.expBarInner) return;
+
+        // Рассчитываем процент опыта до следующего уровня
+        const percent = this.character.experienceForNextLevel > 0 
+            ? (this.character.experience / this.character.experienceForNextLevel) * 100 
+            : 0;
+
+        // Обновляем ширину внутренней части полоски
+        this.expBarInner.style.width = percent.toFixed(1) + '%';
+
+        // Обновляем текст
+        this.expText.textContent = `${this.character.experience} / ${this.character.experienceForNextLevel} (${percent.toFixed(1)}%)`;
+
+        // Изменяем цвет полоски и градиент в зависимости от заполнения
+        if (percent < 30) {
+            // Зеленый градиент для низкого уровня опыта
+            this.expBarInner.style.background = 'linear-gradient(to bottom, #5d9c5d 0%, #4CAF50 50%, #3d8b3d 100%)';
+        } else if (percent < 60) {
+            // Желто-зеленый градиент
+            this.expBarInner.style.background = 'linear-gradient(to bottom, #9ccc65 0%, #8bc34a 50%, #7cb342 100%)';
+        } else if (percent < 85) {
+            // Желтый градиент
+            this.expBarInner.style.background = 'linear-gradient(to bottom, #ffd54f 0%, #ffca28 50%, #ffc107 100%)';
+        } else {
+            // Оранжевый градиент при приближении к следующему уровню
+            this.expBarInner.style.background = 'linear-gradient(to bottom, #ffb74d 0%, #ffa726 50%, #ff9800 100%)';
+        }
     }
     
     /**
@@ -339,8 +453,11 @@ class SkillBar {
         for (let i = 1; i <= 9; i++) {
             this.updateSlotDisplay(i);
         }
-        
+
         // Обновляем отображение здоровья и маны
         this.updateHealthManaDisplay();
+
+        // Обновляем полоску опыта
+        this.updateExperienceBar();
     }
 }

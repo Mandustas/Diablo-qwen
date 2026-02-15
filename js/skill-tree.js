@@ -42,7 +42,10 @@ class SkillTree {
         this.pointsDisplay.style.fontSize = '18px';
         this.pointsDisplay.style.marginBottom = '15px';
         this.container.appendChild(this.pointsDisplay);
-        
+
+        // Полоска опыта
+        this.createExperienceBar();
+
         // Кнопка закрытия
         const closeButton = document.createElement('button');
         closeButton.textContent = 'Закрыть';
@@ -70,7 +73,115 @@ class SkillTree {
         // Обновляем отображение
         this.updateDisplay();
     }
-    
+
+    /**
+     * Создание полоски опыта
+     */
+    createExperienceBar() {
+        // Контейнер для полоски опыта
+        this.expBarContainer = document.createElement('div');
+        this.expBarContainer.style.marginBottom = '15px';
+        this.expBarContainer.style.textAlign = 'center';
+
+        // Текст с уровнем
+        this.levelText = document.createElement('div');
+        this.levelText.id = 'expLevelText';
+        this.levelText.style.marginBottom = '5px';
+        this.levelText.style.fontWeight = 'bold';
+        this.levelText.style.color = '#FFD700'; // Золотой цвет для уровня
+        this.levelText.style.fontFamily = "'MedievalSharp', Georgia, serif";
+        this.levelText.style.fontSize = '16px';
+        this.levelText.style.textShadow = '2px 2px 4px #000';
+        this.expBarContainer.appendChild(this.levelText);
+
+        // Основной контейнер полоски опыта (внешняя рамка в стиле Diablo)
+        this.expBarOuter = document.createElement('div');
+        this.expBarOuter.style.width = '100%';
+        this.expBarOuter.style.height = '24px';
+        this.expBarOuter.style.backgroundColor = '#0d0a0a'; // Темный фон как в Diablo
+        this.expBarOuter.style.border = '2px solid #3a2a1a'; // Темно-коричневая рамка
+        this.expBarOuter.style.borderRadius = '3px';
+        this.expBarOuter.style.position = 'relative';
+        this.expBarOuter.style.overflow = 'hidden';
+        this.expBarOuter.style.boxShadow = 'inset 0 0 8px rgba(0,0,0,0.7)';
+
+        // Внутренняя рамка полоски опыта
+        this.expBarInnerFrame = document.createElement('div');
+        this.expBarInnerFrame.style.width = 'calc(100% - 4px)';
+        this.expBarInnerFrame.style.height = 'calc(100% - 4px)';
+        this.expBarInnerFrame.style.margin = '2px';
+        this.expBarInnerFrame.style.backgroundColor = '#1a1414'; // Ещё темнее внутри
+        this.expBarInnerFrame.style.border = '1px solid #2a2424';
+        this.expBarInnerFrame.style.borderRadius = '2px';
+        this.expBarInnerFrame.style.position = 'relative';
+        this.expBarInnerFrame.style.overflow = 'hidden';
+
+        // Внутренняя часть полоски опыта (сам прогресс)
+        this.expBarInner = document.createElement('div');
+        this.expBarInner.style.height = '100%';
+        this.expBarInner.style.width = '0%';
+        this.expBarInner.style.backgroundColor = 'linear-gradient(to right, #4CAF50, #8BC34A)'; // Временный, будет обновляться
+        this.expBarInner.style.borderRadius = '1px';
+        this.expBarInner.style.transition = 'width 0.3s ease';
+        this.expBarInner.style.background = 'linear-gradient(to bottom, #5d9c5d 0%, #4CAF50 50%, #3d8b3d 100%)'; // Зеленый градиент как в Diablo
+
+        // Текст с процентом опыта
+        this.expText = document.createElement('div');
+        this.expText.id = 'expText';
+        this.expText.style.position = 'absolute';
+        this.expText.style.top = '50%';
+        this.expText.style.left = '50%';
+        this.expText.style.transform = 'translate(-50%, -50%)';
+        this.expText.style.color = '#f0e6d2';
+        this.expText.style.fontSize = '11px';
+        this.expText.style.fontWeight = 'bold';
+        this.expText.style.textShadow = '1px 1px 1px #000';
+        this.expText.style.fontFamily = "'MedievalSharp', Georgia, serif";
+        this.expText.style.pointerEvents = 'none'; // Чтобы не мешал кликам
+
+        this.expBarInnerFrame.appendChild(this.expBarInner);
+        this.expBarInnerFrame.appendChild(this.expText);
+        this.expBarOuter.appendChild(this.expBarInnerFrame);
+        this.expBarContainer.appendChild(this.expBarOuter);
+
+        // Вставляем перед контейнером навыков
+        this.container.insertBefore(this.expBarContainer, this.skillsContainer);
+    }
+
+    /**
+     * Обновление полоски опыта
+     */
+    updateExperienceBar() {
+        if (!this.expBarInner) return;
+
+        // Рассчитываем процент опыта до следующего уровня
+        const percent = this.character.experienceForNextLevel > 0 
+            ? (this.character.experience / this.character.experienceForNextLevel) * 100 
+            : 0;
+
+        // Обновляем ширину внутренней части полоски
+        this.expBarInner.style.width = percent.toFixed(1) + '%';
+
+        // Обновляем текст
+        this.levelText.textContent = `Уровень: ${this.character.level}`;
+        this.expText.textContent = `${this.character.experience} / ${this.character.experienceForNextLevel} (${percent.toFixed(1)}%)`;
+
+        // Изменяем цвет полоски и градиент в зависимости от заполнения
+        if (percent < 30) {
+            // Зеленый градиент для низкого уровня опыта
+            this.expBarInner.style.background = 'linear-gradient(to bottom, #5d9c5d 0%, #4CAF50 50%, #3d8b3d 100%)';
+        } else if (percent < 60) {
+            // Желто-зеленый градиент
+            this.expBarInner.style.background = 'linear-gradient(to bottom, #9ccc65 0%, #8bc34a 50%, #7cb342 100%)';
+        } else if (percent < 85) {
+            // Желтый градиент
+            this.expBarInner.style.background = 'linear-gradient(to bottom, #ffd54f 0%, #ffca28 50%, #ffc107 100%)';
+        } else {
+            // Оранжевый градиент при приближении к следующему уровню
+            this.expBarInner.style.background = 'linear-gradient(to bottom, #ffb74d 0%, #ffa726 50%, #ff9800 100%)';
+        }
+    }
+
     /**
      * Открытие дерева навыков
      */
@@ -105,6 +216,9 @@ class SkillTree {
     updateDisplay() {
         // Обновляем количество очков навыков
         this.pointsDisplay.textContent = `Доступные очки навыков: ${this.character.skillPoints}`;
+
+        // Обновляем полоску опыта
+        this.updateExperienceBar();
 
         // Очищаем контейнер с навыками
         this.skillsContainer.innerHTML = '';
@@ -208,6 +322,9 @@ class SkillTree {
     onCharacterUpdate() {
         if (this.isOpen) {
             this.updateDisplay();
+        } else {
+            // Даже если дерево навыков закрыто, обновляем полоску опыта
+            this.updateExperienceBar();
         }
     }
 }
