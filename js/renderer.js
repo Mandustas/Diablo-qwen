@@ -852,13 +852,186 @@ class Renderer {
     }
     
     /**
+     * Рассчет глубины (z-index) для объекта на основе его позиции
+     * @param {number} x - X координата объекта
+     * @param {number} y - Y координата объекта
+     * @param {number} height - высота объекта (для более точного расчета глубины)
+     * @returns {number} - значение глубины (чем больше, тем ближе к камере)
+     */
+    calculateDepth(x, y, height = 0) {
+        // В изометрической проекции глубина зависит от Y координаты и высоты объекта
+        // Объекты с большей Y координатой и большей высотой должны отображаться поверх объектов с меньшей Y координатой
+        return y + height;
+    }
+
+    /**
+     * Рендеринг всех объектов с учетом глубины (z-index)
+     * @param {Array} objects - массив объектов для рендеринга
+     * @param {Function} renderFunction - функция для рендеринга конкретного объекта
+     */
+    renderWithDepth(objects, renderFunction) {
+        // Сортируем объекты по глубине (от меньшего к большему - сначала дальние, потом ближние)
+        const sortedObjects = [...objects].sort((a, b) => {
+            const depthA = this.calculateDepth(a.x, a.y, a.height || 0);
+            const depthB = this.calculateDepth(b.x, b.y, b.height || 0);
+            return depthA - depthB;
+        });
+
+        // Рендерим отсортированные объекты
+        for (const obj of sortedObjects) {
+            renderFunction(obj);
+        }
+    }
+
+    /**
+     * Рендеринг всех тайлов (фоновых элементов)
+     * @param {Array<Array<number>>} map - карта тайлов
+     * @param {ChunkSystem} chunkSystem - система чанков
+     */
+    renderBackgroundTiles(map, chunkSystem) {
+        // Рендерим фоновые тайлы (пол, вода, лед и т.д.) без участия в глубинной сортировке
+        this.renderTiles(map, chunkSystem);
+    }
+
+    /**
+     * Получение всех объектов на карте для рендеринга с глубиной
+     * @param {Array<Array<number>>} map - карта тайлов
+     * @param {ChunkSystem} chunkSystem - система чанков
+     * @param {Array} enemies - массив врагов
+     * @param {Character} character - персонаж игрока
+     * @returns {Array} - массив всех объектов для рендеринга с глубиной
+     */
+    getAllRenderablesWithDepth(map, chunkSystem, enemies, character) {
+        const allRenderables = [];
+
+        // Добавляем тайлы с 3D-объектами (деревья, скалы и т.д.) которые должны участвовать в глубинной сортировке
+        if (chunkSystem) {
+            const chunksToRender = chunkSystem.getChunksToRender(
+                this.camera.x,
+                this.camera.y,
+                this.canvas.width,
+                this.canvas.height,
+                64 // tileSize
+            );
+
+            for (const chunk of chunksToRender) {
+                if (chunk && chunk.tiles) {
+                    for (let y = 0; y < chunk.tiles.length; y++) {
+                        for (let x = 0; x < chunk.tiles[y].length; x++) {
+                            const tileType = chunk.tiles[y][x];
+
+                            // Преобразуем глобальные координаты тайла в 2D координаты
+                            const globalX = chunk.chunkX * chunk.size + x;
+                            const globalY = chunk.chunkY * chunk.size + y;
+                            const pos = isoTo2D(globalX, globalY);
+
+                            // Корректируем позицию с учетом камеры
+                            const screenX = pos.x - this.camera.x;
+                            const screenY = pos.y - this.camera.y;
+
+                            // Проверяем, находится ли тайл в пределах экрана
+                            if (screenX > -64 && screenX < this.canvas.width + 64 &&
+                                screenY > -32 && screenY < this.canvas.height + 32) {
+
+                                // Добавляем только тайлы с 3D-объектами (деревья, скалы, колонны и т.д.) которые должны участвовать в глубинной сортировке
+                                if (tileType === 2 || tileType === 3 || tileType === 4) { // Декорация, дерево, скала
+                                    allRenderables.push({
+                                        x: pos.x,
+                                        y: pos.y,
+                                        height: tileType === 3 ? 60 : tileType === 4 ? 50 : 30, // Разная высота для разных объектов
+                                        render: () => {
+                                            // Рендерим основной тайл
+                                            if (tileType === 2) { // Колонна
+                                                this.drawColumn(screenX, screenY, 64);
+                                            } else if (tileType === 3) { // Дерево
+                                                this.drawTree(screenX, screenY, 64);
+                                            } else if (tileType === 4) { // Скала
+                                                this.drawRock(screenX, screenY, 64);
+                                            }
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // Старая логика для совместимости
+            if (!map || map.length === 0) return allRenderables;
+
+            for (let y = 0; y < map.length; y++) {
+                for (let x = 0; x < map[y].length; x++) {
+                    const tileType = map[y][x];
+
+                    // Преобразуем координаты тайла в 2D координаты
+                    const pos = isoTo2D(x, y);
+
+                    // Проверяем, находится ли тайл в пределах экрана
+                    const screenX = pos.x - this.camera.x;
+                    const screenY = pos.y - this.camera.y;
+
+                    if (screenX > -64 && screenX < this.canvas.width + 64 &&
+                        screenY > -32 && screenY < this.canvas.height + 32) {
+
+                        // Добавляем только тайлы с 3D-объектами (деревья, скалы, колонны и т.д.) которые должны участвовать в глубинной сортировке
+                        if (tileType === 2 || tileType === 3 || tileType === 4) { // Декорация, дерево, скала
+                            allRenderables.push({
+                                x: pos.x,
+                                y: pos.y,
+                                height: tileType === 3 ? 60 : tileType === 4 ? 50 : 30, // Разная высота для разных объектов
+                                render: () => {
+                                    // Рендерим основной тайл
+                                    if (tileType === 2) { // Колонна
+                                        this.drawColumn(screenX, screenY, 64);
+                                    } else if (tileType === 3) { // Дерево
+                                        this.drawTree(screenX, screenY, 64);
+                                    } else if (tileType === 4) { // Скала
+                                        this.drawRock(screenX, screenY, 64);
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        // Добавляем врагов
+        for (const enemy of enemies) {
+            allRenderables.push({
+                x: enemy.x,
+                y: enemy.y,
+                height: enemy.height || 0,
+                render: () => {
+                    // Рендерим врага
+                    this.renderEnemy(enemy);
+                }
+            });
+        }
+
+        // Добавляем персонажа
+        allRenderables.push({
+            x: character.x,
+            y: character.y,
+            height: character.height || 0,
+            render: () => {
+                // Рендерим персонажа
+                this.renderCharacter(character);
+            }
+        });
+
+        return allRenderables;
+    }
+
+    /**
      * Рендеринг сетки (для отладки)
      * @param {number} gridSize - размер сетки
      */
     renderGrid(gridSize = 64) {
         this.ctx.strokeStyle = this.colors.grid;
         this.ctx.lineWidth = 0.5;
-        
+
         // Вертикальные линии
         for (let x = -this.camera.x % gridSize; x < this.canvas.width; x += gridSize) {
             this.ctx.beginPath();
@@ -866,7 +1039,7 @@ class Renderer {
             this.ctx.lineTo(x, this.canvas.height);
             this.ctx.stroke();
         }
-        
+
         // Горизонтальные линии
         for (let y = -this.camera.y % gridSize; y < this.canvas.height; y += gridSize) {
             this.ctx.beginPath();

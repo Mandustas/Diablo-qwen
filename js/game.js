@@ -786,16 +786,14 @@ class Game {
         // Очищаем холст
         this.renderer.clear();
 
-        // Рендерим карту с использованием системы чанков
-        this.renderer.renderTiles(null, this.chunkSystem);
+        // Рендерим фоновые тайлы (пол, вода и т.д.)
+        this.renderer.renderBackgroundTiles(null, this.chunkSystem);
 
-        // Рендерим врагов
-        for (const enemy of this.enemies) {
-            this.renderer.renderEnemy(enemy);
-        }
+        // Получаем все объекты для рендеринга с учетом глубины
+        const allRenderables = this.renderer.getAllRenderablesWithDepth(null, this.chunkSystem, this.enemies, this.character);
 
-        // Рендерим персонажа
-        this.renderer.renderCharacter(this.character);
+        // Рендерим все объекты с учетом глубины
+        this.renderer.renderWithDepth(allRenderables, (obj) => obj.render());
 
         // При необходимости рендерим сетку (для отладки)
         // this.renderer.renderGrid();
