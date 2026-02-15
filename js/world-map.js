@@ -404,9 +404,48 @@ class ConnectedChunkSystem {
     isPassable(x, y) {
         try {
             const tileType = this.getTile(x, y);
-            return tileType === 0 || tileType === 6 || tileType === 7;
+            // Все тайлы теперь проходимы - деревья, скалы и вода замедляют, но не блокируют
+            // Типы: 0-пол, 1-стена, 2-колонна, 3-дерево, 4-скала, 5-вода, 6-лед, 7-декорация
+            // Непроходимы только стены (1) и колонны (2)
+            return tileType !== 1 && tileType !== 2;
         } catch (e) {
             return false;
+        }
+    }
+
+    /**
+     * Получение типа тайла для определения замедления
+     * @param {number} x - координата X тайла
+     * @param {number} y - координата Y тайла
+     * @returns {number} - тип тайла
+     */
+    getTileType(x, y) {
+        try {
+            return this.getTile(x, y);
+        } catch (e) {
+            return 1; // По умолчанию стена
+        }
+    }
+
+    /**
+     * Проверка, является ли тайл "быстрым" для передвижения
+     * @param {number} x - координата X тайла
+     * @param {number} y - координата Y тайла
+     * @returns {number} - множитель скорости (0.5 = медленно, 1.0 = нормально)
+     */
+    getSpeedMultiplier(x, y) {
+        const tileType = this.getTileType(x, y);
+        switch (tileType) {
+            case 3: // Дерево - медленнее на 40%
+                return 0.6;
+            case 4: // Скала - медленнее на 50%
+                return 0.5;
+            case 5: // Вода - медленнее на 60%
+                return 0.4;
+            case 6: // Лед - быстрее на 30%
+                return 1.3;
+            default:
+                return 1.0;
         }
     }
 

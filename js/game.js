@@ -394,7 +394,11 @@ class Game {
 
             // Проверяем коллизии с врагами перед перемещением
             if (this.isPassable(tilePos.tileX, tilePos.tileY) && !this.checkCharacterEnemyCollision(nextX, nextY)) {
-                this.character.move(moveX, moveY);
+                // Получаем множитель скорости для текущего тайла
+                const speedMultiplier = this.chunkSystem.getSpeedMultiplier(tilePos.tileX, tilePos.tileY);
+                const adjustedMoveX = moveX * speedMultiplier;
+                const adjustedMoveY = moveY * speedMultiplier;
+                this.character.move(adjustedMoveX, adjustedMoveY);
             }
         }
     }
@@ -628,7 +632,11 @@ class Game {
         if (targetX !== this.character.x || targetY !== this.character.y) {
             let tilePos = getTileIndex(targetX, targetY);
             if (this.isPassable(tilePos.tileX, tilePos.tileY)) {
-                this.character.move(targetX - this.character.x, targetY - this.character.y);
+                // Получаем множитель скорости для текущего тайла
+                const speedMultiplier = this.chunkSystem.getSpeedMultiplier(tilePos.tileX, tilePos.tileY);
+                const adjustedMoveX = (targetX - this.character.x) * speedMultiplier;
+                const adjustedMoveY = (targetY - this.character.y) * speedMultiplier;
+                this.character.move(adjustedMoveX, adjustedMoveY);
             }
         }
 

@@ -197,13 +197,17 @@ const GAME_CONFIG = {
         ROOM_OVERLAP_ATTEMPTS: 100,
         BIOME_DENSITY_MIN: 0.3,
         BIOME_DENSITY_MAX: 0.8,
-        OBSTACLE_CHANCE_BASE: 0.05,
-        CORRIDOR_OBSTACLE_MULTIPLIER: 1.5,
+        // Уменьшено с 0.05 до 0.015 - меньше препятствий на полу
+        OBSTACLE_CHANCE_BASE: 0.015,
+        CORRIDOR_OBSTACLE_MULTIPLIER: 1.0,
         DECORATION_CHANCE_BASE: 0.03,
-        FOREST_TREE_CHANCE: 0.15,
-        DESERT_ROCK_CHANCE: 0.1,
-        MOUNTAIN_ROCK_CHANCE: 0.3,
-        SWAMP_WATER_CHANCE: 0.2,
+        // Уменьшено с 0.15 до 0.05 - меньше деревьев в лесу
+        FOREST_TREE_CHANCE: 0.05,
+        DESERT_ROCK_CHANCE: 0.03,
+        // Уменьшено с 0.3 до 0.1 - меньше скал в горах
+        MOUNTAIN_ROCK_CHANCE: 0.1,
+        // Уменьшено с 0.2 до 0.08 - меньше воды в болоте
+        SWAMP_WATER_CHANCE: 0.08,
         ICE_ICE_CHANCE: 0.1,
         DEFAULT_DECORATION_CHANCE: 0.02
     },
