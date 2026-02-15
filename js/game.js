@@ -44,6 +44,14 @@ class Game {
         // Создаем миникарту
         this.minimap = new Minimap(this);
 
+        // Создаем систему эффектов получения уровня
+        this.levelUpEffect = new LevelUpEffect(this.renderer);
+
+        // Устанавливаем обработчик изменения уровня персонажа
+        this.character.onLevelChanged = (level, x, y) => {
+            this.levelUpEffect.triggerLevelUp(x, y, level);
+        };
+
         // Загружаем чанки вокруг персонажа
         const spawnTilePos = getTileIndex(this.character.x, this.character.y);
         this.chunkSystem.loadChunksAround(spawnTilePos.tileX, spawnTilePos.tileY);
@@ -674,6 +682,9 @@ class Game {
         // Обновляем восстановление маны
         this.character.regenerateMana();
 
+        // Обновляем эффект получения уровня
+        this.levelUpEffect.update();
+
         // Обновляем UI каждый кадр для отзывчивости
         this.updateCharacterUI();
     }
@@ -878,6 +889,9 @@ class Game {
 
         // Обновляем миникарту
         this.minimap.update();
+
+        // Рендерим эффект получения уровня
+        this.levelUpEffect.render();
 
         // При необходимости рендерим сетку (для отладки)
         // this.renderer.renderGrid();

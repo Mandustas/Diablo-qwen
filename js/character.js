@@ -242,6 +242,9 @@ class Character {
         // Обновляем UI
         document.getElementById('levelValue').textContent = this.level;
         document.getElementById('healthValue').textContent = this.health;
+
+        // Уведомляем об изменении уровня (эффект будет вызван в game.js)
+        this.onLevelChanged && this.onLevelChanged(this.level, this.x, this.y);
     }
     
     /**
