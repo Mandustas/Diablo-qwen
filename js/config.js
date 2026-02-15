@@ -239,7 +239,7 @@ const GAME_CONFIG = {
     // Настройки UI компонентов
     UI: {
         INVENTORY_WINDOW: {
-            WIDTH: 400,
+            WIDTH: 600,
             HEIGHT: 300,
             SLOT_SIZE: 60,
             SLOT_GAP: 5,
@@ -250,14 +250,14 @@ const GAME_CONFIG = {
             POSITION_LEFT: '50%'
         },
         STATS_WINDOW: {
-            WIDTH: 400,
+            WIDTH: 600,
             PADDING: 20,
             BORDER_WIDTH: 2,
             POSITION_TOP: '50%',
             POSITION_LEFT: '50%'
         },
         SKILL_TREE: {
-            WIDTH: 400,
+            WIDTH: 600,
             PADDING: 20,
             BORDER_WIDTH: 2,
             POSITION_TOP: '50%',

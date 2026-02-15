@@ -17,46 +17,53 @@ class InventoryWindow {
         this.container.style.top = GAME_CONFIG.UI.INVENTORY_WINDOW.POSITION_TOP;
         this.container.style.left = GAME_CONFIG.UI.INVENTORY_WINDOW.POSITION_LEFT;
         this.container.style.transform = 'translate(-50%, -50%)';
-        this.container.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
-        this.container.style.border = GAME_CONFIG.UI.INVENTORY_WINDOW.BORDER_WIDTH + 'px solid #4a4a4a';
-        this.container.style.borderRadius = '10px';
+        this.container.style.background = 'linear-gradient(to bottom, #1a1414 0%, #0d0a0a 100%)';
+        this.container.style.border = GAME_CONFIG.UI.INVENTORY_WINDOW.BORDER_WIDTH + 'px solid #3a2a1a';
+        this.container.style.borderRadius = '3px';
         this.container.style.padding = GAME_CONFIG.UI.INVENTORY_WINDOW.PADDING + 'px';
         this.container.style.zIndex = '100';
         this.container.style.display = 'none'; // Скрыто по умолчанию
-        this.container.style.color = 'white';
-        this.container.style.fontFamily = 'Arial, sans-serif';
+        this.container.style.color = '#c9b896';
+        this.container.style.fontFamily = "'MedievalSharp', Georgia, serif";
         this.container.style.minWidth = GAME_CONFIG.UI.INVENTORY_WINDOW.WIDTH + 'px';
         this.container.style.minHeight = GAME_CONFIG.UI.INVENTORY_WINDOW.HEIGHT + 'px';
-        
+        this.container.style.boxShadow = '0 0 20px rgba(0,0,0,0.8), inset 0 0 10px rgba(74,58,42,0.3)';
+        this.container.style.textShadow = '1px 1px 2px #000';
+
         // Заголовок
         const title = document.createElement('h2');
-        title.textContent = 'Инвентарь';
+        title.textContent = 'ИНВЕНТАРЬ';
         title.style.textAlign = 'center';
         title.style.marginTop = '0';
         title.style.marginBottom = '15px';
+        title.style.color = '#c9b896';
+        title.style.fontFamily = "'MedievalSharp', Georgia, serif";
+        title.style.textTransform = 'uppercase';
+        title.style.letterSpacing = '2px';
+        title.style.textShadow = '2px 2px 4px #000';
+        title.style.borderBottom = '1px solid #3a2a1a';
+        title.style.paddingBottom = '8px';
         this.container.appendChild(title);
-        
+
         // Кнопка закрытия
         const closeButton = document.createElement('button');
-        closeButton.textContent = 'Закрыть';
+        closeButton.textContent = 'ЗАКРЫТЬ';
+        closeButton.className = 'fantasy-btn';
         closeButton.style.position = 'absolute';
         closeButton.style.top = '10px';
         closeButton.style.right = '10px';
-        closeButton.style.background = '#555';
-        closeButton.style.color = 'white';
-        closeButton.style.border = 'none';
-        closeButton.style.borderRadius = '3px';
-        closeButton.style.cursor = 'pointer';
+        closeButton.style.textTransform = 'uppercase';
+        closeButton.style.letterSpacing = '1px';
         closeButton.onclick = () => this.close();
         this.container.appendChild(closeButton);
-        
+
         // Контейнер для слотов инвентаря
         this.slotsContainer = document.createElement('div');
         this.slotsContainer.style.display = 'grid';
         this.slotsContainer.style.gridTemplateColumns = 'repeat(' + GAME_CONFIG.UI.INVENTORY_WINDOW.GRID_COLUMNS + ', 1fr)'; // 5 колонок
         this.slotsContainer.style.gap = GAME_CONFIG.UI.INVENTORY_WINDOW.SLOT_GAP + 'px';
         this.container.appendChild(this.slotsContainer);
-        
+
         // Добавляем в документ
         document.body.appendChild(this.container);
     }
@@ -115,30 +122,32 @@ class InventoryWindow {
         slot.className = 'inventory-slot';
         slot.style.width = GAME_CONFIG.UI.INVENTORY_WINDOW.SLOT_SIZE + 'px';
         slot.style.height = GAME_CONFIG.UI.INVENTORY_WINDOW.SLOT_SIZE + 'px';
-        slot.style.border = '2px solid #444';
-        slot.style.borderRadius = '5px';
-        slot.style.backgroundColor = '#222';
+        slot.style.background = 'linear-gradient(to bottom, #2a1a1a 0%, #1a0f0f 100%)';
+        slot.style.border = '2px solid #3a2a1a';
+        slot.style.borderRadius = '3px';
         slot.style.display = 'flex';
         slot.style.flexDirection = 'column';
         slot.style.justifyContent = 'center';
         slot.style.alignItems = 'center';
         slot.style.position = 'relative';
         slot.style.cursor = 'pointer';
-        
+        slot.style.boxShadow = 'inset 0 1px 0 rgba(201,184,150,0.1)';
+
         if (item) {
             // Устанавливаем цвет рамки в зависимости от редкости
             if (item.getColorByRarity) {
-                slot.style.borderColor = item.getColorByRarity();
-                slot.style.borderWidth = '2px';
+                const rarityColor = item.getColorByRarity();
+                slot.style.border = '2px solid ' + rarityColor;
+                slot.style.boxShadow = '0 0 5px ' + rarityColor + ', inset 0 1px 0 rgba(201,184,150,0.1)';
             }
-            
+
             // Создаем иконку предмета
             const icon = this.createItemIcon(item);
             slot.appendChild(icon);
-            
+
             // Устанавливаем всплывающую подсказку
             slot.title = item.getDescription ? item.getDescription() : (item.name || 'Предмет');
-            
+
             // Обработчик клика для использования/экипировки предмета
             slot.onclick = () => {
                 if (item.type && ['weapon', 'helmet', 'armor', 'ring', 'amulet'].includes(item.type)) {
@@ -149,8 +158,15 @@ class InventoryWindow {
             };
         } else {
             slot.title = 'Пустой слот';
+            // Добавляем эффект при наведении на пустой слот
+            slot.addEventListener('mouseenter', () => {
+                slot.style.border = '2px solid #6a5a4a';
+            });
+            slot.addEventListener('mouseleave', () => {
+                slot.style.border = '2px solid #3a2a1a';
+            });
         }
-        
+
         return slot;
     }
     
@@ -221,42 +237,49 @@ class StatsWindow {
         this.container.style.top = GAME_CONFIG.UI.STATS_WINDOW.POSITION_TOP;
         this.container.style.left = GAME_CONFIG.UI.STATS_WINDOW.POSITION_LEFT;
         this.container.style.transform = 'translate(-50%, -50%)';
-        this.container.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
-        this.container.style.border = GAME_CONFIG.UI.STATS_WINDOW.BORDER_WIDTH + 'px solid #4a4a4a';
-        this.container.style.borderRadius = '10px';
+        this.container.style.background = 'linear-gradient(to bottom, #1a1414 0%, #0d0a0a 100%)';
+        this.container.style.border = GAME_CONFIG.UI.STATS_WINDOW.BORDER_WIDTH + 'px solid #3a2a1a';
+        this.container.style.borderRadius = '3px';
         this.container.style.padding = GAME_CONFIG.UI.STATS_WINDOW.PADDING + 'px';
         this.container.style.zIndex = '100';
         this.container.style.display = 'none'; // Скрыто по умолчанию
-        this.container.style.color = 'white';
-        this.container.style.fontFamily = 'Arial, sans-serif';
+        this.container.style.color = '#c9b896';
+        this.container.style.fontFamily = "'MedievalSharp', Georgia, serif";
         this.container.style.minWidth = GAME_CONFIG.UI.STATS_WINDOW.WIDTH + 'px';
-        
+        this.container.style.boxShadow = '0 0 20px rgba(0,0,0,0.8), inset 0 0 10px rgba(74,58,42,0.3)';
+        this.container.style.textShadow = '1px 1px 2px #000';
+
         // Заголовок
         const title = document.createElement('h2');
-        title.textContent = 'Характеристики';
+        title.textContent = 'ХАРАКТЕРИСТИКИ';
         title.style.textAlign = 'center';
         title.style.marginTop = '0';
         title.style.marginBottom = '15px';
+        title.style.color = '#c9b896';
+        title.style.fontFamily = "'MedievalSharp', Georgia, serif";
+        title.style.textTransform = 'uppercase';
+        title.style.letterSpacing = '2px';
+        title.style.textShadow = '2px 2px 4px #000';
+        title.style.borderBottom = '1px solid #3a2a1a';
+        title.style.paddingBottom = '8px';
         this.container.appendChild(title);
-        
+
         // Кнопка закрытия
         const closeButton = document.createElement('button');
-        closeButton.textContent = 'Закрыть';
+        closeButton.textContent = 'ЗАКРЫТЬ';
+        closeButton.className = 'fantasy-btn';
         closeButton.style.position = 'absolute';
         closeButton.style.top = '10px';
         closeButton.style.right = '10px';
-        closeButton.style.background = '#555';
-        closeButton.style.color = 'white';
-        closeButton.style.border = 'none';
-        closeButton.style.borderRadius = '3px';
-        closeButton.style.cursor = 'pointer';
+        closeButton.style.textTransform = 'uppercase';
+        closeButton.style.letterSpacing = '1px';
         closeButton.onclick = () => this.close();
         this.container.appendChild(closeButton);
-        
+
         // Контейнер для характеристик
         this.statsContainer = document.createElement('div');
         this.container.appendChild(this.statsContainer);
-        
+
         // Добавляем в документ
         document.body.appendChild(this.container);
     }
@@ -295,24 +318,31 @@ class StatsWindow {
     updateDisplay() {
         // Очищаем контейнер с характеристиками
         this.statsContainer.innerHTML = '';
-        
+
         // Основные характеристики
         const statsDiv = document.createElement('div');
-        statsDiv.innerHTML = `
-            <h3>Основные характеристики:</h3>
-            <p>Уровень: ${this.character.level}</p>
-            <p>Здоровье: ${this.character.health}/${this.character.maxHealth}</p>
-            <p>Мана: ${Math.floor(this.character.mana)}/${this.character.maxMana}</p>
-            <p>Опыт: ${this.character.experience}/${this.character.experienceForNextLevel}</p>
-            <p>Очков навыков: ${this.character.skillPoints}</p>
-            <br>
-            <h3>Статы:</h3>
-            <p>Сила: ${this.character.strength} (Урон +${this.character.getTotalStat('damage')})</p>
-            <p>Ловкость: ${this.character.dexterity} (Точность +${this.character.getTotalStat('accuracy')}%, Уклонение +${this.character.getTotalStat('dodge')}%)</p>
-            <p>Живучесть: ${this.character.vitality} (Здоровье +${this.character.getTotalStat('health')}, Броня +${this.character.getTotalStat('armor')})</p>
-            <p>Энергия: ${this.character.energy} (Мана +${this.character.getTotalStat('mana')}, Восст. маны +${this.character.getManaRegenRate().toFixed(1)}/сек)</p>
-        `;
+        statsDiv.style.fontFamily = "'MedievalSharp', Georgia, serif";
+        statsDiv.style.color = '#c9b896';
+        statsDiv.style.textShadow = '1px 1px 2px #000';
         
+        statsDiv.innerHTML = `
+            <div style="margin-bottom: 15px;">
+                <h3 style="color: #c9b896; font-size: 16px; margin: 10px 0 8px 0; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #3a2a1a; padding-bottom: 3px;">Основные характеристики:</h3>
+                <p style="margin: 5px 0;">Уровень: <span style="color: #FFD700; font-weight: bold;">${this.character.level}</span></p>
+                <p style="margin: 5px 0;">Здоровье: <span style="color: #4CAF50; font-weight: bold;">${this.character.health}</span>/<span style="color: #4CAF50;">${this.character.maxHealth}</span></p>
+                <p style="margin: 5px 0;">Мана: <span style="color: #2196F3; font-weight: bold;">${Math.floor(this.character.mana)}</span>/<span style="color: #2196F3;">${this.character.maxMana}</span></p>
+                <p style="margin: 5px 0;">Опыт: <span style="color: #FF9800; font-weight: bold;">${this.character.experience}</span>/<span style="color: #FF9800;">${this.character.experienceForNextLevel}</span></p>
+                <p style="margin: 5px 0;">Очков навыков: <span style="color: #9C27B0; font-weight: bold;">${this.character.skillPoints}</span></p>
+            </div>
+            <div>
+                <h3 style="color: #c9b896; font-size: 16px; margin: 15px 0 8px 0; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #3a2a1a; padding-bottom: 3px;">Статы:</h3>
+                <p style="margin: 5px 0;"><span style="color: #FF9800;">Сила:</span> ${this.character.strength} (Урон +<span style="color: #FF5722; font-weight: bold;">${this.character.getTotalStat('damage')}</span>)</p>
+                <p style="margin: 5px 0;"><span style="color: #2196F3;">Ловкость:</span> ${this.character.dexterity} (Точность +<span style="color: #4CAF50; font-weight: bold;">${this.character.getTotalStat('accuracy')}%</span>, Уклонение +<span style="color: #4CAF50; font-weight: bold;">${this.character.getTotalStat('dodge')}%</span>)</p>
+                <p style="margin: 5px 0;"><span style="color: #4CAF50;">Живучесть:</span> ${this.character.vitality} (Здоровье +<span style="color: #4CAF50; font-weight: bold;">${this.character.getTotalStat('health')}</span>, Броня +<span style="color: #4CAF50; font-weight: bold;">${this.character.getTotalStat('armor')}</span>)</p>
+                <p style="margin: 5px 0;"><span style="color: #2196F3;">Энергия:</span> ${this.character.energy} (Мана +<span style="color: #2196F3; font-weight: bold;">${this.character.getTotalStat('mana')}</span>, Восст. маны +<span style="color: #2196F3; font-weight: bold;">${this.character.getManaRegenRate().toFixed(1)}</span>/сек)</p>
+            </div>
+        `;
+
         this.statsContainer.appendChild(statsDiv);
     }
     

@@ -18,29 +18,41 @@ class SkillTree {
         this.container.style.top = GAME_CONFIG.UI.SKILL_TREE.POSITION_TOP;
         this.container.style.left = GAME_CONFIG.UI.SKILL_TREE.POSITION_LEFT;
         this.container.style.transform = 'translate(-50%, -50%)';
-        this.container.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
-        this.container.style.border = GAME_CONFIG.UI.SKILL_TREE.BORDER_WIDTH + 'px solid #4a4a4a';
-        this.container.style.borderRadius = '10px';
+        this.container.style.background = 'linear-gradient(to bottom, #1a1414 0%, #0d0a0a 100%)';
+        this.container.style.border = GAME_CONFIG.UI.SKILL_TREE.BORDER_WIDTH + 'px solid #3a2a1a';
+        this.container.style.borderRadius = '3px';
         this.container.style.padding = GAME_CONFIG.UI.SKILL_TREE.PADDING + 'px';
         this.container.style.zIndex = '100';
         this.container.style.display = 'none'; // Скрыто по умолчанию
-        this.container.style.color = 'white';
-        this.container.style.fontFamily = 'Arial, sans-serif';
+        this.container.style.color = '#c9b896';
+        this.container.style.fontFamily = "'MedievalSharp', Georgia, serif";
         this.container.style.minWidth = GAME_CONFIG.UI.SKILL_TREE.WIDTH + 'px';
-        
+        this.container.style.boxShadow = '0 0 20px rgba(0,0,0,0.8), inset 0 0 10px rgba(74,58,42,0.3)';
+        this.container.style.textShadow = '1px 1px 2px #000';
+
         // Заголовок
         const title = document.createElement('h2');
-        title.textContent = 'Дерево навыков';
+        title.textContent = 'ДЕРЕВО НАВЫКОВ';
         title.style.textAlign = 'center';
         title.style.marginTop = '0';
+        title.style.marginBottom = '15px';
+        title.style.color = '#c9b896';
+        title.style.fontFamily = "'MedievalSharp', Georgia, serif";
+        title.style.textTransform = 'uppercase';
+        title.style.letterSpacing = '2px';
+        title.style.textShadow = '2px 2px 4px #000';
+        title.style.borderBottom = '1px solid #3a2a1a';
+        title.style.paddingBottom = '8px';
         this.container.appendChild(title);
-        
+
         // Отображение доступных очков навыков
         this.pointsDisplay = document.createElement('p');
         this.pointsDisplay.id = 'skillPointsDisplay';
         this.pointsDisplay.style.textAlign = 'center';
         this.pointsDisplay.style.fontSize = '18px';
         this.pointsDisplay.style.marginBottom = '15px';
+        this.pointsDisplay.style.color = '#9C27B0';
+        this.pointsDisplay.style.fontWeight = 'bold';
         this.container.appendChild(this.pointsDisplay);
 
         // Полоска опыта
@@ -48,28 +60,26 @@ class SkillTree {
 
         // Кнопка закрытия
         const closeButton = document.createElement('button');
-        closeButton.textContent = 'Закрыть';
+        closeButton.textContent = 'ЗАКРЫТЬ';
+        closeButton.className = 'fantasy-btn';
         closeButton.style.position = 'absolute';
         closeButton.style.top = '10px';
         closeButton.style.right = '10px';
-        closeButton.style.background = '#555';
-        closeButton.style.color = 'white';
-        closeButton.style.border = 'none';
-        closeButton.style.borderRadius = '3px';
-        closeButton.style.cursor = 'pointer';
+        closeButton.style.textTransform = 'uppercase';
+        closeButton.style.letterSpacing = '1px';
         closeButton.onclick = () => this.close();
         this.container.appendChild(closeButton);
-        
+
         // Контейнер для навыков
         this.skillsContainer = document.createElement('div');
         this.skillsContainer.style.display = 'grid';
         this.skillsContainer.style.gridTemplateColumns = 'repeat(' + GAME_CONFIG.UI.SKILL_TREE.SKILL_GRID_COLUMNS + ', 1fr)'; // Две колонки
         this.skillsContainer.style.gap = '10px';
         this.container.appendChild(this.skillsContainer);
-        
+
         // Добавляем в документ
         document.body.appendChild(this.container);
-        
+
         // Обновляем отображение
         this.updateDisplay();
     }
@@ -237,11 +247,13 @@ class SkillTree {
     createSkillElement(skillName, skill) {
         const element = document.createElement('div');
         element.className = 'skill-item';
-        element.style.backgroundColor = '#222';
-        element.style.border = '1px solid #444';
-        element.style.borderRadius = '5px';
+        element.style.background = 'linear-gradient(to bottom, #2a1a1a 0%, #1a0f0f 100%)';
+        element.style.border = '1px solid #3a2a1a';
+        element.style.borderRadius = '3px';
         element.style.padding = '10px';
         element.style.cursor = 'pointer';
+        element.style.boxShadow = 'inset 0 1px 0 rgba(201,184,150,0.1)';
+        element.style.transition = 'border-color 0.2s ease';
 
         // Название навыка и уровень
         const header = document.createElement('div');
@@ -253,25 +265,40 @@ class SkillTree {
         const nameSpan = document.createElement('span');
         nameSpan.textContent = `${skill.name} (${skill.level}/${skill.maxLevel})`;
         nameSpan.style.fontWeight = 'bold';
+        nameSpan.style.color = '#c9b896';
 
         const upgradeBtn = document.createElement('button');
         upgradeBtn.textContent = '+';
-        upgradeBtn.style.background = '#666';
-        upgradeBtn.style.color = 'white';
-        upgradeBtn.style.border = 'none';
-        upgradeBtn.style.borderRadius = '3px';
+        upgradeBtn.className = 'fantasy-btn';
         upgradeBtn.style.width = '25px';
         upgradeBtn.style.height = '25px';
         upgradeBtn.style.cursor = 'not-allowed';
+        upgradeBtn.style.textAlign = 'center';
+        upgradeBtn.style.padding = '0';
+        upgradeBtn.style.fontSize = '14px';
+        upgradeBtn.style.fontWeight = 'bold';
         upgradeBtn.disabled = true;
 
         // Функция обновления состояния кнопки
         const updateButtonState = () => {
             const canUpgrade = this.character.skillPoints >= skill.cost && skill.level < skill.maxLevel;
-            upgradeBtn.style.background = canUpgrade ? '#4CAF50' : '#666';
-            upgradeBtn.style.cursor = canUpgrade ? 'pointer' : 'not-allowed';
-            upgradeBtn.disabled = !canUpgrade;
-            element.style.opacity = canUpgrade ? '1' : '0.6';
+            if (canUpgrade) {
+                upgradeBtn.style.background = 'linear-gradient(to bottom, #4CAF50 0%, #3d8b40 100%)';
+                upgradeBtn.style.borderColor = '#2E7D32';
+                upgradeBtn.style.color = '#fff';
+                upgradeBtn.style.cursor = 'pointer';
+                upgradeBtn.disabled = false;
+                element.style.opacity = '1';
+                element.style.border = '1px solid #2E7D32';
+            } else {
+                upgradeBtn.style.background = 'linear-gradient(to bottom, #6a5a4a 0%, #5a4a3a 100%)';
+                upgradeBtn.style.borderColor = '#4a3a2a';
+                upgradeBtn.style.color = '#c9b896';
+                upgradeBtn.style.cursor = 'not-allowed';
+                upgradeBtn.disabled = true;
+                element.style.opacity = canUpgrade ? '1' : '0.6';
+                element.style.border = '1px solid #3a2a1a';
+            }
             nameSpan.textContent = `${skill.name} (${skill.level}/${skill.maxLevel})`;
         };
 
@@ -297,6 +324,8 @@ class SkillTree {
         desc.textContent = skill.description;
         desc.style.fontSize = '12px';
         desc.style.color = '#aaa';
+        desc.style.marginTop = '5px';
+        desc.style.lineHeight = '1.3';
 
         element.appendChild(header);
         element.appendChild(desc);

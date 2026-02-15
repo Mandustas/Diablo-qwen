@@ -36,7 +36,6 @@ class SkillBar {
         this.healthBarContainer.style.height = GAME_CONFIG.UI.SKILL_BAR.HEALTH_MANA_HEIGHT + 'px';
         this.healthBarContainer.style.borderRadius = '50%';
         this.healthBarContainer.style.backgroundColor = '#1a1a1a';
-        this.healthBarContainer.style.border = GAME_CONFIG.UI.SKILL_BAR.HEALTH_MANA_BORDER_WIDTH + 'px solid #3a2a1a';
         this.healthBarContainer.style.position = 'relative';
         this.healthBarContainer.style.overflow = 'hidden';
         this.healthBarContainer.style.boxShadow = '0 0 10px rgba(0,0,0,0.5), 0 0 5px rgba(255,0,0,0.3)';
@@ -78,7 +77,6 @@ class SkillBar {
         this.manaBarContainer.style.height = GAME_CONFIG.UI.SKILL_BAR.HEALTH_MANA_HEIGHT + 'px';
         this.manaBarContainer.style.borderRadius = '50%';
         this.manaBarContainer.style.backgroundColor = '#1a1a1a';
-        this.manaBarContainer.style.border = GAME_CONFIG.UI.SKILL_BAR.HEALTH_MANA_BORDER_WIDTH + 'px solid #3a2a1a';
         this.manaBarContainer.style.position = 'relative';
         this.manaBarContainer.style.overflow = 'hidden';
         this.manaBarContainer.style.boxShadow = '0 0 10px rgba(0,0,0,0.5), 0 0 5px rgba(0,0,255,0.3)';
