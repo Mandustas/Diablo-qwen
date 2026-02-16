@@ -666,6 +666,24 @@ class Game {
     removeEnemy(enemy) {
         const index = this.enemies.indexOf(enemy);
         if (index !== -1) {
+            // Удаляем спрайт врага из кэша и сцены
+            const enemySprite = this.renderer.entitySprites.get(enemy);
+            if (enemySprite) {
+                if (enemySprite.parent) {
+                    enemySprite.parent.removeChild(enemySprite);
+                }
+                this.renderer.entitySprites.delete(enemy);
+            }
+            
+            // Удаляем полоску здоровья врага
+            const healthBar = this.renderer.entitySprites.get(`${enemy}_healthbar`);
+            if (healthBar) {
+                if (healthBar.parent) {
+                    healthBar.parent.removeChild(healthBar);
+                }
+                this.renderer.entitySprites.delete(`${enemy}_healthbar`);
+            }
+            
             this.enemies.splice(index, 1);
         }
     }
@@ -849,8 +867,11 @@ class Game {
                 // Добавляем случайные предметы с врага
                 this.dropItemsFromEnemy(enemy);
 
-                // Удаляем мертвого врага
-                this.enemies.splice(i, 1);
+                // Удаляем мертвого врага (используем метод removeEnemy для очистки спрайтов)
+                this.removeEnemy(enemy);
+                // После удаления врага из массива в removeEnemy, продолжаем цикл
+                // i уже указывает на следующий элемент, поэтому не уменьшаем i
+                continue;
             }
         }
 

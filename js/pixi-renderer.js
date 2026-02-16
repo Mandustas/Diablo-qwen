@@ -26,9 +26,9 @@ class PIXIRenderer {
             targetZoom: GAME_CONFIG.CAMERA.DEFAULT_ZOOM
         };
 
-        // Применяем начальное положение камеры к основному контейнеру
-        this.mainContainer.x = this.app.screen.width / 2;
-        this.mainContainer.y = this.app.screen.height / 2;
+        // НЕ смещаем mainContainer - координаты будут рассчитываться относительно центра экрана в методах рендеринга
+        // this.mainContainer.x = this.app.screen.width / 2;
+        // this.mainContainer.y = this.app.screen.height / 2;
 
         // Размер тайла (базовый)
         this.baseTileSize = GAME_CONFIG.TILE.BASE_SIZE;
@@ -993,10 +993,13 @@ class PIXIRenderer {
         this.camera.x = x;
         this.camera.y = y;
 
-        // Обновляем позицию основного контейнера с учетом камеры
-        this.mainContainer.x = (this.app.screen.width / 2) - (this.camera.x * this.camera.zoom);
-        this.mainContainer.y = (this.app.screen.height / 2) - (this.camera.y * this.camera.zoom);
-        
+        // Обновляем позицию основного контейнера с учетом камеры и зума
+        // Сдвигаем сцену так, чтобы камера была в центре экрана
+        const centerX = this.app.screen.width / 2;
+        const centerY = this.app.screen.height / 2;
+        this.mainContainer.x = centerX - (this.camera.x * this.camera.zoom);
+        this.mainContainer.y = centerY - (this.camera.y * this.camera.zoom);
+
         // Очищаем кэш чанков при перемещении камеры
         this.clearChunkCache();
     }
@@ -1220,7 +1223,7 @@ class PIXIRenderer {
             if (!map || map.length === 0) return;
 
             // Для обратной совместимости используем оригинальный метод
-            const tileSize = this.baseTileSize * this.camera.zoom;
+            const tileSize = this.baseTileSize;
             const buffer = this.baseTileSize * 2;
 
             for (let y = 0; y < map.length; y++) {
@@ -1230,45 +1233,42 @@ class PIXIRenderer {
                     // Преобразуем координаты тайла в 2D координаты
                     const pos = this.isoTo2D(x, y);
 
-                    // Проверяем, видим ли тайл
+                    // Проверяем, видим ли тайл (преобразуем мировые координаты в экранные)
+                    const centerX = this.app.screen.width / 2;
+                    const centerY = this.app.screen.height / 2;
+                    const screenX = centerX + (pos.x - this.camera.x) * this.camera.zoom;
+                    const screenY = centerY + (pos.y - this.camera.y) * this.camera.zoom;
+
                     if (!this.isObjectVisible(pos.x, pos.y, tileSize, tileSize / 2)) {
                         continue; // Пропускаем невидимые тайлы
                     }
 
-                    // Центр экрана
-                    const centerX = this.app.screen.width / 2;
-                    const centerY = this.app.screen.height / 2;
-
-                    // Корректируем позицию с учетом камеры и зума
-                    const screenX = centerX + (pos.x - this.camera.x - centerX) * this.camera.zoom;
-                    const screenY = centerY + (pos.y - this.camera.y - centerY) * this.camera.zoom;
-
-                    // Создаем спрайт тайла в зависимости от типа
+                    // Создаем спрайт тайла в зависимости от типа (используем мировые координаты)
                     let tileSprite;
                     switch (tileType) {
                         case 0: // Пол
-                            tileSprite = this.createFloorTile(screenX, screenY, tileSize);
+                            tileSprite = this.createFloorTile(pos.x, pos.y, tileSize);
                             break;
                         case 1: // Стена
-                            tileSprite = this.createWallTile(screenX, screenY, tileSize);
+                            tileSprite = this.createWallTile(pos.x, pos.y, tileSize);
                             break;
                         case 2: // Декорация (колонна)
-                            tileSprite = this.createColumnTile(screenX, screenY, tileSize);
+                            tileSprite = this.createColumnTile(pos.x, pos.y, tileSize);
                             break;
                         case 3: // Дерево (непроходимое)
-                            tileSprite = this.createTreeTile(screenX, screenY, tileSize);
+                            tileSprite = this.createTreeTile(pos.x, pos.y, tileSize);
                             break;
                         case 4: // Скала (непроходимое)
-                            tileSprite = this.createRockTile(screenX, screenY, tileSize);
+                            tileSprite = this.createRockTile(pos.x, pos.y, tileSize);
                             break;
                         case 5: // Вода (непроходимое)
-                            tileSprite = this.createWaterTile(screenX, screenY, tileSize);
+                            tileSprite = this.createWaterTile(pos.x, pos.y, tileSize);
                             break;
                         case 6: // Лед (проходимое с эффектом)
-                            tileSprite = this.createIceTile(screenX, screenY, tileSize);
+                            tileSprite = this.createIceTile(pos.x, pos.y, tileSize);
                             break;
                         case 7: // Декорация (проходимая)
-                            tileSprite = this.createDecorationTile(screenX, screenY, tileSize);
+                            tileSprite = this.createDecorationTile(pos.x, pos.y, tileSize);
                             break;
                         default:
                             continue; // Пропускаем неизвестные типы тайлов
@@ -1487,10 +1487,6 @@ class PIXIRenderer {
      * @param {Character} character - персонаж для рендеринга
      */
     renderCharacter(character) {
-        // Преобразуем координаты персонажа в экранные с учетом камеры и зума
-        const screenX = (this.app.screen.width / 2) + (character.x - this.camera.x) * this.camera.zoom;
-        const screenY = (this.app.screen.height / 2) + (character.y - this.camera.y) * this.camera.zoom;
-
         // Создаем или обновляем спрайт персонажа
         let characterSprite = this.entitySprites.get(character);
         if (!characterSprite) {
@@ -1499,15 +1495,18 @@ class PIXIRenderer {
             characterSprite = new PIXI.Sprite(texture);
             this.entitySprites.set(character, characterSprite);
             this.objectLayer.addChild(characterSprite);
+        } else if (!characterSprite.parent) {
+            // Если спрайт есть в кэше, но не в дереве сцены, добавляем его
+            this.objectLayer.addChild(characterSprite);
         }
 
-        // Устанавливаем позицию и масштаб спрайта
-        characterSprite.x = screenX;
-        characterSprite.y = screenY;
-        characterSprite.scale.set(this.camera.zoom, this.camera.zoom);
+        // Устанавливаем позицию спрайта
+        // mainContainer уже перемещен и масштабирован на основе камеры, поэтому используем только мировые координаты
+        characterSprite.x = character.x;
+        characterSprite.y = character.y;
 
         // Рисуем индикатор здоровья
-        this.renderHealthBar(character, screenX, screenY - 25 * this.camera.zoom);
+        this.renderHealthBar(character, characterSprite.x, characterSprite.y - 25);
     }
 
     /**
@@ -1525,33 +1524,36 @@ class PIXIRenderer {
         let healthBarContainer = this.entitySprites.get(`${entity}_healthbar`);
         if (!healthBarContainer) {
             healthBarContainer = new PIXI.Container();
-            
+
             // Создаем спрайты для фона и заполнения
             const backgroundSprite = new PIXI.Graphics();
             backgroundSprite.beginFill(0x333333);
             backgroundSprite.drawRect(0, 0, barWidth, barHeight);
             backgroundSprite.endFill();
             healthBarContainer.addChild(backgroundSprite);
-            
+
             const fillSprite = new PIXI.Graphics();
             fillSprite.beginFill(0x4CAF50); // Начальный цвет - зеленый
             fillSprite.drawRect(0, 0, barWidth * healthPercent, barHeight);
             fillSprite.endFill();
             healthBarContainer.addChild(fillSprite);
-            
+
             // Добавляем контейнер к UI слою
             this.uiLayer.addChild(healthBarContainer);
             this.entitySprites.set(`${entity}_healthbar`, healthBarContainer);
+        } else if (!healthBarContainer.parent) {
+            // Если контейнер есть в кэше, но не в дереве сцены, добавляем его
+            this.uiLayer.addChild(healthBarContainer);
         }
-        
+
         // Обновляем позицию контейнера
         healthBarContainer.x = x - barWidth / 2;
         healthBarContainer.y = y + GAME_CONFIG.RENDERER.HEALTH_BAR.OFFSET_Y;
-        
+
         // Обновляем заполнение полосы здоровья
         const fillSprite = healthBarContainer.children[1]; // Второй элемент - заполнение
         fillSprite.clear();
-        
+
         // Определяем цвет в зависимости от уровня здоровья
         let healthColor;
         if (healthPercent > GAME_CONFIG.RENDERER.HEALTH_BAR.HEALTH_COLOR_THRESHOLD_HIGH) {
@@ -1561,7 +1563,7 @@ class PIXIRenderer {
         } else {
             healthColor = 0xF44336; // Красный
         }
-        
+
         fillSprite.beginFill(healthColor);
         fillSprite.drawRect(0, 0, barWidth * healthPercent, barHeight);
         fillSprite.endFill();
@@ -1572,10 +1574,6 @@ class PIXIRenderer {
      * @param {Object} enemy - объект врага
      */
     renderEnemy(enemy) {
-        // Преобразуем координаты врага в экранные с учетом камеры и зума
-        const screenX = (this.app.screen.width / 2) + (enemy.x - this.camera.x) * this.camera.zoom;
-        const screenY = (this.app.screen.height / 2) + (enemy.y - this.camera.y) * this.camera.zoom;
-
         // Создаем или обновляем спрайт врага
         let enemySprite = this.entitySprites.get(enemy);
         if (!enemySprite) {
@@ -1595,20 +1593,23 @@ class PIXIRenderer {
                     textureKey = 'enemy_tank';
                     break;
             }
-            
+
             const texture = this.entityTextures.get(textureKey);
             enemySprite = new PIXI.Sprite(texture);
             this.entitySprites.set(enemy, enemySprite);
             this.objectLayer.addChild(enemySprite);
+        } else if (!enemySprite.parent) {
+            // Если спрайт есть в кэше, но не в дереве сцены, добавляем его
+            this.objectLayer.addChild(enemySprite);
         }
 
-        // Устанавливаем позицию и масштаб спрайта
-        enemySprite.x = screenX;
-        enemySprite.y = screenY;
-        enemySprite.scale.set(this.camera.zoom, this.camera.zoom);
+        // Устанавливаем позицию спрайта
+        // mainContainer уже перемещен и масштабирован на основе камеры, поэтому используем только мировые координаты
+        enemySprite.x = enemy.x;
+        enemySprite.y = enemy.y;
 
         // Рисуем индикатор здоровья врага
-        this.renderHealthBar(enemy, screenX, screenY - 25 * this.camera.zoom);
+        this.renderHealthBar(enemy, enemySprite.x, enemySprite.y - 25);
     }
 
 
@@ -1642,10 +1643,15 @@ class PIXIRenderer {
      * Очистка сцены
      */
     clear() {
-        // Очищаем все слои
+        // Очищаем слой тайлов
         this.tileLayer.removeChildren();
-        this.objectLayer.removeChildren();
+        
+        // Очищаем слой UI
         this.uiLayer.removeChildren();
+        
+        // НЕ очищаем objectLayer полностью - сохраняем спрайты сущностей
+        // Вместо этого очищаем только временные объекты (частицы, эффекты)
+        // Спрайты персонажей и врагов остаются в слое и просто обновляются по позиции
     }
 
     /**
@@ -2028,16 +2034,13 @@ class PIXIRenderer {
                             const globalY = chunk.chunkY * chunk.size + y;
                             const pos = this.isoTo2D(globalX, globalY);
 
-                            // Корректируем позицию с учетом камеры и зума
-                            // Центр экрана
+                            // Проверяем, находится ли тайл в пределах экрана
+                            // Преобразуем мировые координаты в экранные для проверки видимости
                             const centerX = this.app.screen.width / 2;
                             const centerY = this.app.screen.height / 2;
-
-                            // Позиция объекта относительно центра экрана с учетом зума
                             const screenX = centerX + (pos.x - this.camera.x) * this.camera.zoom;
                             const screenY = centerY + (pos.y - this.camera.y) * this.camera.zoom;
 
-                            // Проверяем, находится ли тайл в пределах экрана
                             if (screenX > -buffer && screenX < this.app.screen.width + buffer &&
                                 screenY > -buffer / 2 && screenY < this.app.screen.height + buffer / 2) {
 
@@ -2048,13 +2051,13 @@ class PIXIRenderer {
                                         y: pos.y,
                                         height: tileType === 3 ? 60 : tileType === 4 ? 50 : 30, // Разная высота для разных объектов
                                         render: () => {
-                                            // Рендерим основной тайл с учетом зума
+                                            // Рендерим основной тайл с учетом зума (используем мировые координаты, масштабирование применяется через mainContainer.scale)
                                             if (tileType === 2) { // Колонна
-                                                this.createColumnTile(screenX, screenY, tileSize);
+                                                this.createColumnTile(pos.x, pos.y, this.baseTileSize);
                                             } else if (tileType === 3) { // Дерево
-                                                this.createTreeTile(screenX, screenY, tileSize);
+                                                this.createTreeTile(pos.x, pos.y, this.baseTileSize);
                                             } else if (tileType === 4) { // Скала
-                                                this.createRockTile(screenX, screenY, tileSize);
+                                                this.createRockTile(pos.x, pos.y, this.baseTileSize);
                                             }
                                         }
                                     });
@@ -2075,15 +2078,13 @@ class PIXIRenderer {
                     // Преобразуем координаты тайла в 2D координаты
                     const pos = this.isoTo2D(x, y);
 
-                    // Центр экрана
+                    // Проверяем, находится ли тайл в пределах экрана
+                    // Преобразуем мировые координаты в экранные для проверки видимости
                     const centerX = this.app.screen.width / 2;
                     const centerY = this.app.screen.height / 2;
+                    const screenX = centerX + (pos.x - this.camera.x) * this.camera.zoom;
+                    const screenY = centerY + (pos.y - this.camera.y) * this.camera.zoom;
 
-                    // Позиция объекта относительно центра экрана с учетом зума
-                    const screenX = centerX + (pos.x - this.camera.x - centerX) * this.camera.zoom;
-                    const screenY = centerY + (pos.y - this.camera.y - centerY) * this.camera.zoom;
-
-                    // Проверяем, находится ли тайл в пределах экрана
                     if (screenX > -buffer && screenX < this.app.screen.width + buffer &&
                         screenY > -buffer / 2 && screenY < this.app.screen.height + buffer / 2) {
 
@@ -2094,13 +2095,13 @@ class PIXIRenderer {
                                 y: pos.y,
                                 height: tileType === 3 ? 60 : tileType === 4 ? 50 : 30, // Разная высота для разных объектов
                                 render: () => {
-                                    // Рендерим основной тайл с учетом зума
+                                    // Рендерим основной тайл с учетом зума (используем мировые координаты, масштабирование применяется через mainContainer.scale)
                                     if (tileType === 2) { // Колонна
-                                        this.createColumnTile(screenX, screenY, tileSize);
+                                        this.createColumnTile(pos.x, pos.y, this.baseTileSize);
                                     } else if (tileType === 3) { // Дерево
-                                        this.createTreeTile(screenX, screenY, tileSize);
+                                        this.createTreeTile(pos.x, pos.y, this.baseTileSize);
                                     } else if (tileType === 4) { // Скала
-                                        this.createRockTile(screenX, screenY, tileSize);
+                                        this.createRockTile(pos.x, pos.y, this.baseTileSize);
                                     }
                                 }
                             });
