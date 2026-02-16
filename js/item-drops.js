@@ -94,8 +94,18 @@ class ItemDrop {
     render(renderer, isHovered = false) {
         if (this.pickedUp) return;
 
-        const centerX = renderer.canvas.width / 2;
-        const centerY = renderer.canvas.height / 2;
+        // Получаем canvas и ctx (поддержка как старого Renderer, так и PIXIRenderer)
+        const canvas = renderer.canvas || (renderer.app && renderer.app.view);
+        const ctx = renderer.ctx || (canvas ? canvas.getContext('2d') : null);
+
+        if (!ctx) {
+            // Если контекст не найден (PIXI рендерер), пропускаем рендеринг предметов
+            // Предметы будут отображаться через PIXI спрайты (будет реализовано отдельно)
+            return;
+        }
+
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
 
         // Преобразуем координаты предмета в экранные с учетом камеры и зума
         // Используем отображаемые координаты для рендеринга, но реальные для проверки коллизий
@@ -107,9 +117,9 @@ class ItemDrop {
         const scaledHeight = this.height * renderer.camera.zoom;
 
         // Рисуем рамку предмета в зависимости от редкости
-        renderer.ctx.strokeStyle = this.item.getColorByRarity(); // Белая рамка при наведении
-        renderer.ctx.lineWidth = (2) * renderer.camera.zoom; 
-        renderer.ctx.strokeRect(
+        ctx.strokeStyle = this.item.getColorByRarity(); // Белая рамка при наведении
+        ctx.lineWidth = (2) * renderer.camera.zoom;
+        ctx.strokeRect(
             screenX - scaledWidth / 2,
             screenY - scaledHeight / 2,
             scaledWidth,
@@ -117,8 +127,8 @@ class ItemDrop {
         );
 
         // Заливка фона рамки
-        renderer.ctx.fillStyle = isHovered ? "rgba(255, 255, 255, 0.4)" :'rgba(255, 255, 255, 0.2)'; // Более светлая заливка при наведении
-        renderer.ctx.fillRect(
+        ctx.fillStyle = isHovered ? "rgba(255, 255, 255, 0.4)" :'rgba(255, 255, 255, 0.2)'; // Более светлая заливка при наведении
+        ctx.fillRect(
             screenX - scaledWidth / 2,
             screenY - scaledHeight / 2,
             scaledWidth,
@@ -126,11 +136,11 @@ class ItemDrop {
         );
 
         // Рисуем название предмета
-        renderer.ctx.font = `${10 * renderer.camera.zoom}px Arial`;
-        renderer.ctx.textAlign = 'center';
-        renderer.ctx.textBaseline = 'middle';
-        renderer.ctx.fillStyle = this.item.getColorByRarity(); // Желтый текст при наведении
-        renderer.ctx.fillText(
+        ctx.font = `${10 * renderer.camera.zoom}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = this.item.getColorByRarity(); // Желтый текст при наведении
+        ctx.fillText(
             this.item.name,
             screenX,
             screenY
@@ -308,16 +318,22 @@ class ItemDropSystem {
     isPointOverDrop(x, y, drop) {
         if (drop.pickedUp) return false;
 
-        const centerX = this.renderer.canvas.width / 2;
-        const centerY = this.renderer.canvas.height / 2;
+        // Получаем canvas (поддержка как старого Renderer, так и PIXIRenderer)
+        const renderer = this.renderer;
+        const canvas = renderer.canvas || (renderer.app && renderer.app.view);
+        
+        if (!canvas) return false;
+
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
 
         // Преобразуем координаты предмета в экранные с учетом камеры и зума
-        const screenX = centerX + (drop.displayX - this.renderer.camera.x) * this.renderer.camera.zoom;
-        const screenY = centerY + (drop.displayY - this.renderer.camera.y) * this.renderer.camera.zoom;
+        const screenX = centerX + (drop.displayX - renderer.camera.x) * renderer.camera.zoom;
+        const screenY = centerY + (drop.displayY - renderer.camera.y) * renderer.camera.zoom;
 
         // Размеры с учетом зума
-        const scaledWidth = drop.width * this.renderer.camera.zoom;
-        const scaledHeight = drop.height * this.renderer.camera.zoom;
+        const scaledWidth = drop.width * renderer.camera.zoom;
+        const scaledHeight = drop.height * renderer.camera.zoom;
 
         // Проверяем, находится ли точка внутри прямоугольника предмета
         return (

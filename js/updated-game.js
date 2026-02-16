@@ -1089,8 +1089,8 @@ class Game {
         // Рендерим все объекты с учетом глубины
         this.renderer.renderWithDepth(allRenderables, (obj) => obj.render());
 
-        // Рендерим выпавшие предметы
-        this.itemDropSystem.render(this.renderer, this.hoveredItemDrop);
+        // Рендерим выпавшие предметы через PIXI
+        this.renderer.renderItems(this.itemDropSystem.drops, this.hoveredItemDrop);
 
         // Обновляем миникарту
         this.minimap.update();

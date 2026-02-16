@@ -392,17 +392,25 @@ class CombatEffectsSystem {
             return;
         }
 
-        const ctx = this.renderer.ctx;
+        // Получаем canvas и ctx (поддержка как старого Renderer, так и PIXIRenderer)
+        const canvas = this.renderer.canvas || (this.renderer.app && this.renderer.app.view);
+        const ctx = this.renderer.ctx || (canvas ? canvas.getContext('2d') : null);
+
+        if (!ctx) {
+            // Если контекст не найден (PIXI рендерер), пропускаем рендеринг эффектов
+            // Эффекты будут добавлены через систему частиц PIXI
+            return;
+        }
 
         // Сохраняем текущее состояние контекста
         ctx.save();
 
         // Центр экрана
-        const centerX = this.renderer.canvas.width / 2;
-        const centerY = this.renderer.canvas.height / 2;
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
 
         for (const effect of this.effects) {
-            // Преобразуем мировые координаты в экранные
+            // Преобразуем мировые координаты в экранные с учетом зума
             const screenX = centerX + (effect.x - this.renderer.camera.x) * this.renderer.camera.zoom;
             const screenY = centerY + (effect.y - this.renderer.camera.y) * this.renderer.camera.zoom;
 
@@ -414,9 +422,9 @@ class CombatEffectsSystem {
                 // Устанавливаем цвет вспышки
                 ctx.fillStyle = effect.color;
 
-                // Рисуем круг-вспышку
+                // Рисуем круг-вспышку (масштабируем размер с учетом зума)
                 ctx.beginPath();
-                ctx.arc(screenX, screenY, effect.size, 0, Math.PI * 2);
+                ctx.arc(screenX, screenY, effect.size * this.renderer.camera.zoom, 0, Math.PI * 2);
                 ctx.fill();
             } else if (effect.type === 'damage_particle' || effect.type === 'critical_particle' || effect.type === 'dodge_particle') {
                 // Рассчитываем прозрачность в зависимости от оставшегося времени жизни
@@ -426,17 +434,17 @@ class CombatEffectsSystem {
                 // Устанавливаем цвет частицы
                 ctx.fillStyle = effect.color;
 
-                // Рисуем круг-частицу
+                // Рисуем круг-частицу (масштабируем размер с учетом зума)
                 ctx.beginPath();
-                ctx.arc(screenX, screenY, effect.size * alpha, 0, Math.PI * 2);
+                ctx.arc(screenX, screenY, effect.size * this.renderer.camera.zoom * alpha, 0, Math.PI * 2);
                 ctx.fill();
             } else if (effect.type === 'damage_text' || effect.type === 'critical_text' || effect.type === 'miss_text') {
                 // Рассчитываем прозрачность
                 const alpha = effect.life / effect.maxLife;
                 ctx.globalAlpha = alpha;
 
-                // Устанавливаем стиль текста
-                ctx.font = `${effect.fontSize * effect.scale}px 'MedievalSharp', Arial, sans-serif`;
+                // Устанавливаем стиль текста (масштабируем размер с учетом зума)
+                ctx.font = `${effect.fontSize * effect.scale * this.renderer.camera.zoom}px 'MedievalSharp', Arial, sans-serif`;
                 ctx.fillStyle = effect.color;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';

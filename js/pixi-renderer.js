@@ -135,23 +135,47 @@ class PIXIRenderer {
         const entitySize = { width: 32, height: 32 };
 
         // Текстура игрока
-        const playerTexture = this.createPlayerTexture(entitySize);
+        let playerTexture = this.createPlayerTexture(entitySize);
+        if (!playerTexture || !playerTexture.valid) {
+            console.warn('Не удалось создать текстуру игрока, используем резервную');
+            playerTexture = this.createFallbackTexture(32, 0x4a9eff);
+        }
         this.entityTextures.set('player', playerTexture);
 
         // Текстуры для различных типов врагов
-        const basicEnemyTexture = this.createEnemyTexture(entitySize, this.colors.enemy);
+        let basicEnemyTexture = this.createEnemyTexture(entitySize, this.colors.enemy);
+        if (!basicEnemyTexture || !basicEnemyTexture.valid) {
+            console.warn('Не удалось создать текстуру врага (basic), используем резервную');
+            basicEnemyTexture = this.createFallbackTexture(32, 0xff4a4a);
+        }
         this.entityTextures.set('enemy_basic', basicEnemyTexture);
 
-        const weakEnemyTexture = this.createEnemyTexture(entitySize, this.colors.enemyWeak);
+        let weakEnemyTexture = this.createEnemyTexture(entitySize, this.colors.enemyWeak);
+        if (!weakEnemyTexture || !weakEnemyTexture.valid) {
+            console.warn('Не удалось создать текстуру врага (weak), используем резервную');
+            weakEnemyTexture = this.createFallbackTexture(32, 0xa0a0a0);
+        }
         this.entityTextures.set('enemy_weak', weakEnemyTexture);
 
-        const strongEnemyTexture = this.createEnemyTexture(entitySize, this.colors.enemyStrong);
+        let strongEnemyTexture = this.createEnemyTexture(entitySize, this.colors.enemyStrong);
+        if (!strongEnemyTexture || !strongEnemyTexture.valid) {
+            console.warn('Не удалось создать текстуру врага (strong), используем резервную');
+            strongEnemyTexture = this.createFallbackTexture(32, 0xff6600);
+        }
         this.entityTextures.set('enemy_strong', strongEnemyTexture);
 
-        const fastEnemyTexture = this.createEnemyTexture(entitySize, this.colors.enemyFast);
+        let fastEnemyTexture = this.createEnemyTexture(entitySize, this.colors.enemyFast);
+        if (!fastEnemyTexture || !fastEnemyTexture.valid) {
+            console.warn('Не удалось создать текстуру врага (fast), используем резервную');
+            fastEnemyTexture = this.createFallbackTexture(32, 0xffff00);
+        }
         this.entityTextures.set('enemy_fast', fastEnemyTexture);
 
-        const tankEnemyTexture = this.createEnemyTexture(entitySize, this.colors.enemyTank);
+        let tankEnemyTexture = this.createEnemyTexture(entitySize, this.colors.enemyTank);
+        if (!tankEnemyTexture || !tankEnemyTexture.valid) {
+            console.warn('Не удалось создать текстуру врага (tank), используем резервную');
+            tankEnemyTexture = this.createFallbackTexture(32, 0x8b0000);
+        }
         this.entityTextures.set('enemy_tank', tankEnemyTexture);
     }
 
@@ -188,17 +212,22 @@ class PIXIRenderer {
         graphics.drawCircle(4, -16, 2);
         graphics.endFill();
 
-        // Оружие (меч)
-        graphics.lineStyle(3, 0xc0c0c0); // Серебристый
-        graphics.moveTo(10, -10);
-        graphics.lineTo(20, -20);
+        // Оружие (меч) - используем drawRect вместо lineTo
+        graphics.beginFill(0xc0c0c0); // Серебристый
+        graphics.drawRect(10, -10, 2, 10);
+        graphics.endFill();
 
         // Рукоять меча
         graphics.beginFill(0x8b4513); // Коричневый
         graphics.drawRect(8, -8, 5, 10);
         graphics.endFill();
 
-        return this.app.renderer.generateTexture(graphics);
+        try {
+            return this.app.renderer.generateTexture(graphics);
+        } catch (e) {
+            console.error('Ошибка при создании текстуры игрока:', e);
+            return null;
+        }
     }
 
     /**
@@ -209,7 +238,7 @@ class PIXIRenderer {
      */
     createEnemyTexture(size, color) {
         const graphics = new PIXI.Graphics();
-        
+
         // Тело врага
         graphics.beginFill(this.hexToDecimal(color));
         this.drawIsometricEntity(graphics, 0, 0, size.width * 0.8, size.height * 0.6);
@@ -232,7 +261,12 @@ class PIXIRenderer {
         graphics.drawCircle(5, -17, 1);
         graphics.endFill();
 
-        return this.app.renderer.generateTexture(graphics);
+        try {
+            return this.app.renderer.generateTexture(graphics);
+        } catch (e) {
+            console.error('Ошибка при создании текстуры врага:', e);
+            return null;
+        }
     }
 
     /**
@@ -519,43 +553,68 @@ class PIXIRenderer {
     }
 
     /**
-     * Генерация текстур для тайлов
+     * Генерация текстур для тайлов - отложенная загрузка
+     * Текстуры создаются при первом обращении
      */
     generateTileTextures() {
-        // Создаем текстуры для различных типов тайлов
-        const tileSize = this.baseTileSize;
+        // Не создаём текстуры в конструкторе - они будут созданы при первом рендеринге
+        // Инициализируем пустые записи в Map для всех типов тайлов
+        this.tileTextures.set(0, null);
+        this.tileTextures.set(1, null);
+        this.tileTextures.set(2, null);
+        this.tileTextures.set(3, null);
+        this.tileTextures.set(4, null);
+        this.tileTextures.set(5, null);
+        this.tileTextures.set(6, null);
+        this.tileTextures.set(7, null);
+    }
 
-        // Текстура пола
-        const floorTexture = this.createFloorTexture(tileSize);
-        this.tileTextures.set(0, floorTexture);
+    /**
+     * Получение текстуры тайла с ленивой загрузкой
+     * @param {number} tileType - тип тайла
+     * @returns {PIXI.Texture} - текстура тайла
+     */
+    getTileTexture(tileType) {
+        let texture = this.tileTextures.get(tileType);
 
-        // Текстура стены
-        const wallTexture = this.createWallTexture(tileSize);
-        this.tileTextures.set(1, wallTexture);
+        // Проверяем, что текстура существует и имеет валидные размеры
+        const isValidTexture = texture && 
+                               texture.baseTexture && 
+                               (texture.baseTexture.width > 0 || (texture.width && texture.width > 0));
 
-        // Текстура колонны
-        const columnTexture = this.createColumnTexture(tileSize);
-        this.tileTextures.set(2, columnTexture);
+        // Если текстура не создана или невалидна - создаём её заново
+        if (!isValidTexture) {
+            const tileSize = this.baseTileSize;
 
-        // Текстура дерева
-        const treeTexture = this.createTreeTexture(tileSize);
-        this.tileTextures.set(3, treeTexture);
+            // Пытаемся создать текстуру для известного типа тайла через Graphics
+            if (tileType >= 0 && tileType <= 7) {
+                try {
+                    switch(tileType) {
+                        case 0: texture = this.createFloorTexture(tileSize); break;
+                        case 1: texture = this.createWallTexture(tileSize); break;
+                        case 2: texture = this.createColumnTexture(tileSize); break;
+                        case 3: texture = this.createTreeTexture(tileSize); break;
+                        case 4: texture = this.createRockTexture(tileSize); break;
+                        case 5: texture = this.createWaterTexture(tileSize); break;
+                        case 6: texture = this.createIceTexture(tileSize); break;
+                        case 7: texture = this.createDecorationTexture(tileSize); break;
+                    }
+                } catch (e) {
+                    console.error(`Ошибка создания текстуры для тайла ${tileType}:`, e);
+                    texture = null;
+                }
+            }
 
-        // Текстура скалы
-        const rockTexture = this.createRockTexture(tileSize);
-        this.tileTextures.set(4, rockTexture);
+            // Если не удалось создать или неизвестный тип - используем резервную
+            if (!texture) {
+                const fallbackColors = [0x556B2F, 0x8B7355, 0x696969, 0x228B22, 0x808080, 0x1976d2, 0xbbdefb, 0x8bc34a];
+                texture = this.createFallbackTexture(tileSize, fallbackColors[tileType] || 0x808080);
+            }
 
-        // Текстура воды
-        const waterTexture = this.createWaterTexture(tileSize);
-        this.tileTextures.set(5, waterTexture);
+            this.tileTextures.set(tileType, texture);
+        }
 
-        // Текстура льда
-        const iceTexture = this.createIceTexture(tileSize);
-        this.tileTextures.set(6, iceTexture);
-
-        // Текстура декорации
-        const decorationTexture = this.createDecorationTexture(tileSize);
-        this.tileTextures.set(7, decorationTexture);
+        return texture;
     }
 
     /**
@@ -564,35 +623,43 @@ class PIXIRenderer {
      * @returns {PIXI.Texture} - текстура пола
      */
     createFloorTexture(tileSize) {
-        const graphics = new PIXI.Graphics();
-        
-        // Основной пол
-        graphics.beginFill(this.hexToDecimal(this.colors.floor));
-        this.drawIsometricTile(graphics, 0, 0, tileSize, tileSize / 2);
-        graphics.endFill();
+        try {
+            const graphics = new PIXI.Graphics();
 
-        // Добавляем текстуру пола
-        graphics.beginFill(this.hexToDecimal(this.colors.floorLight));
-        
-        // Рисуем узор на полу
-        graphics.moveTo(0, 0);
-        graphics.lineTo(tileSize / 4, tileSize / 8);
-        graphics.lineTo(0, tileSize / 4);
-        graphics.lineTo(-tileSize / 4, tileSize / 8);
-        graphics.closePath();
-        
-        graphics.endFill();
+            // Основной пол
+            graphics.beginFill(this.hexToDecimal(this.colors.floor));
+            this.drawIsometricTile(graphics, 0, 0, tileSize, tileSize / 2);
+            graphics.endFill();
 
-        // Обводка для контраста
-        graphics.lineStyle(1, this.hexToDecimal(this.colors.grid));
-        graphics.moveTo(0, 0);
-        graphics.lineTo(tileSize / 2, tileSize / 4);
-        graphics.lineTo(0, tileSize / 2);
-        graphics.lineTo(-tileSize / 2, tileSize / 4);
-        graphics.closePath();
+            // Добавляем текстуру пола
+            graphics.beginFill(this.hexToDecimal(this.colors.floorLight));
 
-        // Создаем текстуру из графики
-        return this.app.renderer.generateTexture(graphics);
+            // Рисуем узор на полу (квадрат в центре)
+            graphics.drawRect(-tileSize / 8, -tileSize / 16, tileSize / 4, tileSize / 8);
+            graphics.endFill();
+
+            // Обводка для контраста
+            graphics.lineStyle(1, this.hexToDecimal(this.colors.grid));
+            graphics.moveTo(0, 0);
+            graphics.lineTo(tileSize / 2, tileSize / 4);
+            graphics.lineTo(0, tileSize / 2);
+            graphics.lineTo(-tileSize / 2, tileSize / 4);
+            graphics.closePath();
+
+            // Создаем текстуру из графики
+            const texture = this.app.renderer.generateTexture(graphics);
+            graphics.destroy(); // Очищаем память
+            
+            // Проверяем, что текстура имеет размеры
+            if (texture && texture.width > 0 && texture.height > 0) {
+                return texture;
+            }
+        } catch (e) {
+            console.error('Ошибка при создании текстуры пола:', e);
+        }
+        
+        // Fallback - создаём через canvas
+        return this.createFallbackTexture(tileSize, this.hexToDecimal(this.colors.floor));
     }
 
     /**
@@ -601,45 +668,49 @@ class PIXIRenderer {
      * @returns {PIXI.Texture} - текстура стены
      */
     createWallTexture(tileSize) {
-        const graphics = new PIXI.Graphics();
-        
-        // Основная стена
-        graphics.beginFill(this.hexToDecimal(this.colors.wall));
-        this.drawIsometricTile(graphics, 0, 0, tileSize, tileSize / 2);
-        graphics.endFill();
+        try {
+            const graphics = new PIXI.Graphics();
 
-        // Добавляем детали стены (кирпичная кладка)
-        graphics.beginFill(this.hexToDecimal(this.colors.wallDark));
-        const brickWidth = tileSize / 4;
-        const brickHeight = tileSize / 8;
+            // Основная стена
+            graphics.beginFill(this.hexToDecimal(this.colors.wall));
+            this.drawIsometricTile(graphics, 0, 0, tileSize, tileSize / 2);
+            graphics.endFill();
 
-        // Рисуем кирпичи
-        for (let row = 0; row < 2; row++) {
-            for (let col = 0; col < 2; col++) {
-                if ((row + col) % 2 === 0) { // Чередуем кирпичи
-                    const brickX = (col * brickWidth) - (row * brickWidth / 2);
-                    const brickY = (row * brickHeight);
+            // Добавляем детали стены (кирпичная кладка)
+            graphics.beginFill(this.hexToDecimal(this.colors.wallDark));
+            const brickWidth = tileSize / 4;
+            const brickHeight = tileSize / 8;
 
-                    graphics.moveTo(brickX, brickY);
-                    graphics.lineTo(brickX + brickWidth / 2, brickY + brickHeight / 2);
-                    graphics.lineTo(brickX, brickY + brickHeight);
-                    graphics.lineTo(brickX - brickWidth / 2, brickY + brickHeight / 2);
-                    graphics.closePath();
+            for (let row = 0; row < 2; row++) {
+                for (let col = 0; col < 2; col++) {
+                    if ((row + col) % 2 === 0) {
+                        const brickX = (col * brickWidth) - (row * brickWidth / 2) - brickWidth / 2;
+                        const brickY = (row * brickHeight) - brickHeight / 2;
+                        graphics.drawRect(brickX, brickY, brickWidth, brickHeight);
+                    }
                 }
             }
+
+            graphics.endFill();
+
+            graphics.lineStyle(1, 0x4a3b2a);
+            graphics.moveTo(0, 0);
+            graphics.lineTo(tileSize / 2, tileSize / 4);
+            graphics.lineTo(0, tileSize / 2);
+            graphics.lineTo(-tileSize / 2, tileSize / 4);
+            graphics.closePath();
+
+            const texture = this.app.renderer.generateTexture(graphics);
+            graphics.destroy();
+            
+            if (texture && texture.width > 0 && texture.height > 0) {
+                return texture;
+            }
+        } catch (e) {
+            console.error('Ошибка при создании текстуры стены:', e);
         }
-
-        graphics.endFill();
-
-        // Обводка для контраста
-        graphics.lineStyle(1, 0x4a3b2a);
-        graphics.moveTo(0, 0);
-        graphics.lineTo(tileSize / 2, tileSize / 4);
-        graphics.lineTo(0, tileSize / 2);
-        graphics.lineTo(-tileSize / 2, tileSize / 4);
-        graphics.closePath();
-
-        return this.app.renderer.generateTexture(graphics);
+        
+        return this.createFallbackTexture(tileSize, this.hexToDecimal(this.colors.wall));
     }
 
     /**
@@ -648,40 +719,47 @@ class PIXIRenderer {
      * @returns {PIXI.Texture} - текстура колонны
      */
     createColumnTexture(tileSize) {
-        const graphics = new PIXI.Graphics();
+        try {
+            const graphics = new PIXI.Graphics();
+
+            graphics.beginFill(this.hexToDecimal(this.colors.wallDark));
+            this.drawIsometricTile(graphics, 0, 0, tileSize * 0.6, tileSize / 2 * 0.6);
+            graphics.endFill();
+
+            graphics.beginFill(this.hexToDecimal(this.colors.wall));
+            graphics.moveTo(0, -tileSize * 0.1);
+            graphics.lineTo(tileSize * 0.2, tileSize * 0.05);
+            graphics.lineTo(0, tileSize * 0.2);
+            graphics.lineTo(-tileSize * 0.2, tileSize * 0.05);
+            graphics.closePath();
+            graphics.endFill();
+
+            graphics.beginFill(this.hexToDecimal(this.colors.wallDark));
+            graphics.moveTo(0, -tileSize * 0.2);
+            graphics.lineTo(tileSize * 0.25, -tileSize * 0.05);
+            graphics.lineTo(0, tileSize * 0.1);
+            graphics.lineTo(-tileSize * 0.25, -tileSize * 0.05);
+            graphics.closePath();
+            graphics.endFill();
+
+            graphics.lineStyle(1, 0x4a3b2a);
+            graphics.moveTo(0, 0);
+            graphics.lineTo(tileSize / 2, tileSize / 4);
+            graphics.lineTo(0, tileSize / 2);
+            graphics.lineTo(-tileSize / 2, tileSize / 4);
+            graphics.closePath();
+
+            const texture = this.app.renderer.generateTexture(graphics);
+            graphics.destroy();
+            
+            if (texture && texture.width > 0 && texture.height > 0) {
+                return texture;
+            }
+        } catch (e) {
+            console.error('Ошибка при создании текстуры колонны:', e);
+        }
         
-        // Основание колонны
-        graphics.beginFill(this.hexToDecimal(this.colors.wallDark));
-        this.drawIsometricTile(graphics, 0, 0, tileSize * 0.6, tileSize / 2 * 0.6);
-        graphics.endFill();
-
-        // Ствол колонны
-        graphics.beginFill(this.hexToDecimal(this.colors.wall));
-        graphics.moveTo(0, -tileSize * 0.1);
-        graphics.lineTo(tileSize * 0.2, tileSize * 0.05);
-        graphics.lineTo(0, tileSize * 0.2);
-        graphics.lineTo(-tileSize * 0.2, tileSize * 0.05);
-        graphics.closePath();
-        graphics.endFill();
-
-        // Верхушка колонны
-        graphics.beginFill(this.hexToDecimal(this.colors.wallDark));
-        graphics.moveTo(0, -tileSize * 0.2);
-        graphics.lineTo(tileSize * 0.25, -tileSize * 0.05);
-        graphics.lineTo(0, tileSize * 0.1);
-        graphics.lineTo(-tileSize * 0.25, -tileSize * 0.05);
-        graphics.closePath();
-        graphics.endFill();
-
-        // Обводка для контраста
-        graphics.lineStyle(1, 0x4a3b2a);
-        graphics.moveTo(0, 0);
-        graphics.lineTo(tileSize / 2, tileSize / 4);
-        graphics.lineTo(0, tileSize / 2);
-        graphics.lineTo(-tileSize / 2, tileSize / 4);
-        graphics.closePath();
-
-        return this.app.renderer.generateTexture(graphics);
+        return this.createFallbackTexture(tileSize, this.hexToDecimal(this.colors.wall));
     }
 
     /**
@@ -690,41 +768,47 @@ class PIXIRenderer {
      * @returns {PIXI.Texture} - текстура дерева
      */
     createTreeTexture(tileSize) {
-        const graphics = new PIXI.Graphics();
+        try {
+            const graphics = new PIXI.Graphics();
+
+            graphics.beginFill(this.hexToDecimal(this.colors.treeTrunk));
+            this.drawIsometricTile(graphics, 0, 0, tileSize * 0.4, tileSize / 2 * 0.4);
+            graphics.endFill();
+
+            graphics.beginFill(0x4a2c22);
+            graphics.moveTo(-tileSize * 0.1, tileSize * 0.1);
+            graphics.lineTo(tileSize * 0.1, tileSize * 0.2);
+            graphics.lineTo(0, tileSize * 0.3);
+            graphics.lineTo(-tileSize * 0.2, tileSize * 0.2);
+            graphics.closePath();
+            graphics.endFill();
+
+            graphics.beginFill(this.hexToDecimal(this.colors.treeLeaves));
+            graphics.drawCircle(0, -tileSize * 0.3, tileSize * 0.4);
+            graphics.endFill();
+
+            graphics.beginFill(0x2e7a2f);
+            graphics.drawCircle(-tileSize * 0.1, -tileSize * 0.4, tileSize * 0.2);
+            graphics.endFill();
+
+            graphics.beginFill(0x2e7a2f);
+            graphics.drawCircle(tileSize * 0.15, -tileSize * 0.25, tileSize * 0.15);
+            graphics.endFill();
+
+            graphics.lineStyle(1, 0x2a5a2a);
+            graphics.drawCircle(0, -tileSize * 0.3, tileSize * 0.4);
+
+            const texture = this.app.renderer.generateTexture(graphics);
+            graphics.destroy();
+            
+            if (texture && texture.width > 0 && texture.height > 0) {
+                return texture;
+            }
+        } catch (e) {
+            console.error('Ошибка при создании текстуры дерева:', e);
+        }
         
-        // Ствол дерева
-        graphics.beginFill(this.hexToDecimal(this.colors.treeTrunk));
-        this.drawIsometricTile(graphics, 0, 0, tileSize * 0.4, tileSize / 2 * 0.4);
-        graphics.endFill();
-
-        // Тень от ствола
-        graphics.beginFill(0x4a2c22);
-        graphics.moveTo(-tileSize * 0.1, tileSize * 0.1);
-        graphics.lineTo(tileSize * 0.1, tileSize * 0.2);
-        graphics.lineTo(0, tileSize * 0.3);
-        graphics.lineTo(-tileSize * 0.2, tileSize * 0.2);
-        graphics.closePath();
-        graphics.endFill();
-
-        // Крона дерева
-        graphics.beginFill(this.hexToDecimal(this.colors.treeLeaves));
-        graphics.drawCircle(0, -tileSize * 0.3, tileSize * 0.4);
-        graphics.endFill();
-
-        // Более темные участки кроны для объема
-        graphics.beginFill(0x2e7a2f);
-        graphics.drawCircle(-tileSize * 0.1, -tileSize * 0.4, tileSize * 0.2);
-        graphics.endFill();
-
-        graphics.beginFill(0x2e7a2f);
-        graphics.drawCircle(tileSize * 0.15, -tileSize * 0.25, tileSize * 0.15);
-        graphics.endFill();
-
-        // Обводка для контраста
-        graphics.lineStyle(1, 0x2a5a2a);
-        graphics.drawCircle(0, -tileSize * 0.3, tileSize * 0.4);
-
-        return this.app.renderer.generateTexture(graphics);
+        return this.createFallbackTexture(tileSize, this.hexToDecimal(this.colors.treeLeaves));
     }
 
     /**
@@ -733,40 +817,46 @@ class PIXIRenderer {
      * @returns {PIXI.Texture} - текстура скалы
      */
     createRockTexture(tileSize) {
-        const graphics = new PIXI.Graphics();
+        try {
+            const graphics = new PIXI.Graphics();
+
+            graphics.beginFill(this.hexToDecimal(this.colors.rock));
+            this.drawIsometricTile(graphics, 0, 0, tileSize * 0.7, tileSize / 2 * 0.7);
+            graphics.endFill();
+
+            graphics.beginFill(0x6d4c41);
+            graphics.moveTo(0, -tileSize * 0.1);
+            graphics.lineTo(tileSize * 0.15, tileSize * 0.05);
+            graphics.lineTo(0, tileSize * 0.2);
+            graphics.lineTo(-tileSize * 0.15, tileSize * 0.05);
+            graphics.closePath();
+
+            graphics.moveTo(-tileSize * 0.2, tileSize * 0.1);
+            graphics.lineTo(-tileSize * 0.05, tileSize * 0.25);
+            graphics.lineTo(-tileSize * 0.15, tileSize * 0.35);
+            graphics.lineTo(-tileSize * 0.3, tileSize * 0.2);
+            graphics.closePath();
+
+            graphics.endFill();
+
+            graphics.lineStyle(1, 0x5a3c2a);
+            graphics.moveTo(0, 0);
+            graphics.lineTo(tileSize / 2, tileSize / 4);
+            graphics.lineTo(0, tileSize / 2);
+            graphics.lineTo(-tileSize / 2, tileSize / 4);
+            graphics.closePath();
+
+            const texture = this.app.renderer.generateTexture(graphics);
+            graphics.destroy();
+            
+            if (texture && texture.width > 0 && texture.height > 0) {
+                return texture;
+            }
+        } catch (e) {
+            console.error('Ошибка при создании текстуры скалы:', e);
+        }
         
-        // Основная скала
-        graphics.beginFill(this.hexToDecimal(this.colors.rock));
-        this.drawIsometricTile(graphics, 0, 0, tileSize * 0.7, tileSize / 2 * 0.7);
-        graphics.endFill();
-
-        // Добавляем текстуру скалы
-        graphics.beginFill(0x6d4c41);
-
-        // Неровности скалы
-        graphics.moveTo(0, -tileSize * 0.1);
-        graphics.lineTo(tileSize * 0.15, tileSize * 0.05);
-        graphics.lineTo(0, tileSize * 0.2);
-        graphics.lineTo(-tileSize * 0.15, tileSize * 0.05);
-        graphics.closePath();
-
-        graphics.moveTo(-tileSize * 0.2, tileSize * 0.1);
-        graphics.lineTo(-tileSize * 0.05, tileSize * 0.25);
-        graphics.lineTo(-tileSize * 0.15, tileSize * 0.35);
-        graphics.lineTo(-tileSize * 0.3, tileSize * 0.2);
-        graphics.closePath();
-
-        graphics.endFill();
-
-        // Обводка для контраста
-        graphics.lineStyle(1, 0x5a3c2a);
-        graphics.moveTo(0, 0);
-        graphics.lineTo(tileSize / 2, tileSize / 4);
-        graphics.lineTo(0, tileSize / 2);
-        graphics.lineTo(-tileSize / 2, tileSize / 4);
-        graphics.closePath();
-
-        return this.app.renderer.generateTexture(graphics);
+        return this.createFallbackTexture(tileSize, this.hexToDecimal(this.colors.rock));
     }
 
     /**
@@ -775,40 +865,43 @@ class PIXIRenderer {
      * @returns {PIXI.Texture} - текстура воды
      */
     createWaterTexture(tileSize) {
-        const graphics = new PIXI.Graphics();
-        
-        // Основная вода
-        graphics.beginFill(this.hexToDecimal(this.colors.water));
-        this.drawIsometricTile(graphics, 0, 0, tileSize, tileSize / 2);
-        graphics.endFill();
+        try {
+            const graphics = new PIXI.Graphics();
 
-        // Анимация воды (волны)
-        graphics.beginFill(0x42a5f5);
+            graphics.beginFill(this.hexToDecimal(this.colors.water));
+            this.drawIsometricTile(graphics, 0, 0, tileSize, tileSize / 2);
+            graphics.endFill();
 
-        // Рисуем волны
-        for (let i = 0; i < 3; i++) {
-            const waveX = (i - 1) * tileSize * 0.2;
-            const waveY = Math.sin(Date.now() / 500 + i) * tileSize * 0.05;
+            graphics.beginFill(0x42a5f5);
+            for (let i = 0; i < 3; i++) {
+                const waveX = (i - 1) * tileSize * 0.2;
+                const waveY = Math.sin(Date.now() / 500 + i) * tileSize * 0.05;
+                graphics.drawCircle(waveX, waveY, tileSize * 0.08);
+            }
+            graphics.endFill();
 
-            graphics.drawCircle(waveX, waveY, tileSize * 0.08);
+            graphics.beginFill(0x90caf9);
+            graphics.drawCircle(-tileSize * 0.2, -tileSize * 0.1, tileSize * 0.05);
+            graphics.endFill();
+
+            graphics.lineStyle(1, 0x0d47a1);
+            graphics.moveTo(0, 0);
+            graphics.lineTo(tileSize / 2, tileSize / 4);
+            graphics.lineTo(0, tileSize / 2);
+            graphics.lineTo(-tileSize / 2, tileSize / 4);
+            graphics.closePath();
+
+            const texture = this.app.renderer.generateTexture(graphics);
+            graphics.destroy();
+            
+            if (texture && texture.width > 0 && texture.height > 0) {
+                return texture;
+            }
+        } catch (e) {
+            console.error('Ошибка при создании текстуры воды:', e);
         }
-
-        graphics.endFill();
-
-        // Блики на воде
-        graphics.beginFill(0x90caf9);
-        graphics.drawCircle(-tileSize * 0.2, -tileSize * 0.1, tileSize * 0.05);
-        graphics.endFill();
-
-        // Обводка для контраста
-        graphics.lineStyle(1, 0x0d47a1);
-        graphics.moveTo(0, 0);
-        graphics.lineTo(tileSize / 2, tileSize / 4);
-        graphics.lineTo(0, tileSize / 2);
-        graphics.lineTo(-tileSize / 2, tileSize / 4);
-        graphics.closePath();
-
-        return this.app.renderer.generateTexture(graphics);
+        
+        return this.createFallbackTexture(tileSize, this.hexToDecimal(this.colors.water));
     }
 
     /**
@@ -817,37 +910,44 @@ class PIXIRenderer {
      * @returns {PIXI.Texture} - текстура льда
      */
     createIceTexture(tileSize) {
-        const graphics = new PIXI.Graphics();
+        try {
+            const graphics = new PIXI.Graphics();
+
+            graphics.beginFill(this.hexToDecimal(this.colors.ice));
+            this.drawIsometricTile(graphics, 0, 0, tileSize, tileSize / 2);
+            graphics.endFill();
+
+            graphics.beginFill(0xe3f2fd);
+            graphics.drawCircle(-tileSize * 0.2, -tileSize * 0.1, tileSize * 0.08);
+            graphics.endFill();
+
+            graphics.beginFill(0xe3f2fd);
+            graphics.drawCircle(tileSize * 0.15, -tileSize * 0.15, tileSize * 0.05);
+            graphics.endFill();
+
+            graphics.lineStyle(1, 0x90caf9);
+            graphics.moveTo(-tileSize * 0.2, 0);
+            graphics.lineTo(tileSize * 0.1, -tileSize * 0.1);
+            graphics.lineTo(tileSize * 0.2, tileSize * 0.1);
+
+            graphics.lineStyle(1, 0x90caf9);
+            graphics.moveTo(0, 0);
+            graphics.lineTo(tileSize / 2, tileSize / 4);
+            graphics.lineTo(0, tileSize / 2);
+            graphics.lineTo(-tileSize / 2, tileSize / 4);
+            graphics.closePath();
+
+            const texture = this.app.renderer.generateTexture(graphics);
+            graphics.destroy();
+            
+            if (texture && texture.width > 0 && texture.height > 0) {
+                return texture;
+            }
+        } catch (e) {
+            console.error('Ошибка при создании текстуры льда:', e);
+        }
         
-        // Основной лед
-        graphics.beginFill(this.hexToDecimal(this.colors.ice));
-        this.drawIsometricTile(graphics, 0, 0, tileSize, tileSize / 2);
-        graphics.endFill();
-
-        // Эффект прозрачности и блеска
-        graphics.beginFill(0xe3f2fd);
-        graphics.drawCircle(-tileSize * 0.2, -tileSize * 0.1, tileSize * 0.08);
-        graphics.endFill();
-
-        graphics.beginFill(0xe3f2fd);
-        graphics.drawCircle(tileSize * 0.15, -tileSize * 0.15, tileSize * 0.05);
-        graphics.endFill();
-
-        // Трещины на льду
-        graphics.lineStyle(1, 0x90caf9);
-        graphics.moveTo(-tileSize * 0.2, 0);
-        graphics.lineTo(tileSize * 0.1, -tileSize * 0.1);
-        graphics.lineTo(tileSize * 0.2, tileSize * 0.1);
-
-        // Обводка для контраста
-        graphics.lineStyle(1, 0x90caf9);
-        graphics.moveTo(0, 0);
-        graphics.lineTo(tileSize / 2, tileSize / 4);
-        graphics.lineTo(0, tileSize / 2);
-        graphics.lineTo(-tileSize / 2, tileSize / 4);
-        graphics.closePath();
-
-        return this.app.renderer.generateTexture(graphics);
+        return this.createFallbackTexture(tileSize, this.hexToDecimal(this.colors.ice));
     }
 
     /**
@@ -856,35 +956,40 @@ class PIXIRenderer {
      * @returns {PIXI.Texture} - текстура декорации
      */
     createDecorationTexture(tileSize) {
-        const graphics = new PIXI.Graphics();
-        
-        // Цветок или куст
-        graphics.beginFill(this.hexToDecimal(this.colors.decoration));
-        graphics.drawCircle(0, 0, tileSize * 0.15);
-        graphics.endFill();
+        try {
+            const graphics = new PIXI.Graphics();
 
-        // Петельки цветка
-        graphics.beginFill(0x7cb342);
-        for (let i = 0; i < 5; i++) {
-            const angle = (i * 2 * Math.PI) / 5;
-            const petalX = Math.cos(angle) * tileSize * 0.1;
-            const petalY = Math.sin(angle) * tileSize * 0.05;
+            graphics.beginFill(this.hexToDecimal(this.colors.decoration));
+            graphics.drawCircle(0, 0, tileSize * 0.15);
+            graphics.endFill();
 
-            graphics.drawCircle(petalX, petalY, tileSize * 0.08);
+            graphics.beginFill(0x7cb342);
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 2 * Math.PI) / 5;
+                const petalX = Math.cos(angle) * tileSize * 0.1;
+                const petalY = Math.sin(angle) * tileSize * 0.05;
+                graphics.drawCircle(petalX, petalY, tileSize * 0.08);
+            }
+            graphics.endFill();
+
+            graphics.beginFill(0xffff00);
+            graphics.drawCircle(0, 0, tileSize * 0.05);
+            graphics.endFill();
+
+            graphics.lineStyle(1, 0x689f38);
+            graphics.drawCircle(0, 0, tileSize * 0.15);
+
+            const texture = this.app.renderer.generateTexture(graphics);
+            graphics.destroy();
+            
+            if (texture && texture.width > 0 && texture.height > 0) {
+                return texture;
+            }
+        } catch (e) {
+            console.error('Ошибка при создании текстуры декорации:', e);
         }
-
-        graphics.endFill();
-
-        // Центр цветка
-        graphics.beginFill(0xffff00);
-        graphics.drawCircle(0, 0, tileSize * 0.05);
-        graphics.endFill();
-
-        // Обводка для контраста
-        graphics.lineStyle(1, 0x689f38);
-        graphics.drawCircle(0, 0, tileSize * 0.15);
-
-        return this.app.renderer.generateTexture(graphics);
+        
+        return this.createFallbackTexture(tileSize, this.hexToDecimal(this.colors.decoration));
     }
 
     /**
@@ -894,7 +999,9 @@ class PIXIRenderer {
      */
     createChunkContainer(chunk) {
         const chunkContainer = new PIXI.Container();
-        
+        const tileSize = this.baseTileSize;
+        let spriteCount = 0;
+
         for (let y = 0; y < chunk.tiles.length; y++) {
             for (let x = 0; x < chunk.tiles[y].length; x++) {
                 const tileType = chunk.tiles[y][x];
@@ -904,43 +1011,47 @@ class PIXIRenderer {
                 const globalY = chunk.chunkY * chunk.size + y;
                 const pos = this.isoTo2D(globalX, globalY);
 
-                // Создаем спрайт тайла в зависимости от типа
-                let tileSprite;
-                switch (tileType) {
-                    case 0: // Пол
-                        tileSprite = this.createFloorTile(pos.x, pos.y, this.baseTileSize);
-                        break;
-                    case 1: // Стена
-                        tileSprite = this.createWallTile(pos.x, pos.y, this.baseTileSize);
-                        break;
-                    case 2: // Декорация (колонна)
-                        tileSprite = this.createColumnTile(pos.x, pos.y, this.baseTileSize);
-                        break;
-                    case 3: // Дерево (непроходимое)
-                        tileSprite = this.createTreeTile(pos.x, pos.y, this.baseTileSize);
-                        break;
-                    case 4: // Скала (непроходимое)
-                        tileSprite = this.createRockTile(pos.x, pos.y, this.baseTileSize);
-                        break;
-                    case 5: // Вода (непроходимое)
-                        tileSprite = this.createWaterTile(pos.x, pos.y, this.baseTileSize);
-                        break;
-                    case 6: // Лед (проходимое с эффектом)
-                        tileSprite = this.createIceTile(pos.x, pos.y, this.baseTileSize);
-                        break;
-                    case 7: // Декорация (проходимая)
-                        tileSprite = this.createDecorationTile(pos.x, pos.y, this.baseTileSize);
-                        break;
-                    default:
-                        continue; // Пропускаем неизвестные типы тайлов
+                // Получаем текстуру через ленивую загрузку
+                const texture = this.getTileTexture(tileType);
+
+                // Проверяем текстуру - должна существовать и иметь размеры
+                if (!texture) {
+                    continue;
                 }
 
-                if (tileSprite) {
-                    chunkContainer.addChild(tileSprite);
+                // Проверяем, что у текстуры есть baseTexture и размеры
+                const hasBaseTexture = texture.baseTexture !== null && texture.baseTexture !== undefined;
+                const hasValidSize = hasBaseTexture && (texture.baseTexture.width > 0 || (texture.width && texture.width > 0));
+
+                if (!hasValidSize) {
+                    continue;
                 }
+
+                // Создаём спрайт
+                const sprite = new PIXI.Sprite(texture);
+
+                // Масштабируем спрайт до нужного размера
+                // Защита от некорректных размеров текстуры
+                const textureWidth = texture.width || tileSize;
+                const textureHeight = texture.height || Math.max(Math.floor(tileSize / 2), 2);
+                const scaleX = tileSize / textureWidth;
+                const scaleY = (tileSize / 2) / textureHeight;
+                sprite.scale.set(scaleX, scaleY);
+
+                // Устанавливаем позицию
+                sprite.x = pos.x;
+                sprite.y = pos.y;
+
+                chunkContainer.addChild(sprite);
+                spriteCount++;
             }
         }
-        
+
+        // Проверяем, что чанк не пустой
+        if (spriteCount === 0) {
+            console.warn(`Чанк (${chunk.chunkX}, ${chunk.chunkY}) создан пустым (${spriteCount} спрайтов)`);
+        }
+
         return chunkContainer;
     }
 
@@ -952,12 +1063,19 @@ class PIXIRenderer {
     getCachedChunk(chunk) {
         const chunkKey = `${chunk.chunkX},${chunk.chunkY}`;
         let chunkContainer = this.chunkCache.get(chunkKey);
-        
+
         if (!chunkContainer) {
             chunkContainer = this.createChunkContainer(chunk);
             this.chunkCache.set(chunkKey, chunkContainer);
+        } else {
+            // Проверяем, что чанк не пустой
+            if (chunkContainer.children.length === 0) {
+                console.warn(`Чанк ${chunkKey} в кэше пустой, пересоздаём`);
+                chunkContainer = this.createChunkContainer(chunk);
+                this.chunkCache.set(chunkKey, chunkContainer);
+            }
         }
-        
+
         return chunkContainer;
     }
 
@@ -968,17 +1086,18 @@ class PIXIRenderer {
         // Удаляем старые чанки из кэша, чтобы освободить память
         // Оставляем только те чанки, которые находятся в пределах определенного радиуса от текущей позиции камеры
         const maxChunkDistance = 10; // Максимальное расстояние в чанках
-        
+
         const currentChunkX = Math.floor(this.camera.x / (this.baseTileSize * 16)); // 16 - размер чанка по умолчанию
         const currentChunkY = Math.floor(this.camera.y / (this.baseTileSize * 16));
-        
+
         for (const [key, chunkContainer] of this.chunkCache.entries()) {
             const [chunkX, chunkY] = key.split(',').map(Number);
             const distance = Math.abs(chunkX - currentChunkX) + Math.abs(chunkY - currentChunkY);
-            
+
             if (distance > maxChunkDistance) {
-                // Удаляем чанк из кэша и уничтожаем его спрайты
-                chunkContainer.destroy({ children: true, texture: true, baseTexture: true });
+                // Удаляем чанк из кэша и уничтожаем только его контейнер и спрайты
+                // НЕ уничтожаем текстуры, так как они общие для всех чанков
+                chunkContainer.destroy({ children: true, texture: false, baseTexture: false });
                 this.chunkCache.delete(key);
             }
         }
@@ -1196,10 +1315,16 @@ class PIXIRenderer {
      * @param {ChunkSystem} chunkSystem - система чанков (опционально)
      */
     renderTiles(map, chunkSystem = null) {
-        // Очищаем предыдущие тайлы
+        // Очищаем предыдущие тайлы - removeChildren удаляет детей из контейнера, но не уничтожает их
         this.tileLayer.removeChildren();
 
         if (chunkSystem) {
+            // Предварительно загружаем текстуры для всех типов тайлов
+            // Это гарантирует, что текстуры будут созданы до рендеринга чанков
+            for (let tileType = 0; tileType <= 7; tileType++) {
+                this.getTileTexture(tileType);
+            }
+
             // Рендерим только видимые чанки
             const chunksToRender = chunkSystem.getChunksToRender(
                 this.camera.x,
@@ -1214,8 +1339,18 @@ class PIXIRenderer {
                     // Получаем закэшированный чанк или создаем новый
                     const chunkContainer = this.getCachedChunk(chunk);
                     
-                    // Добавляем контейнер чанка к слою тайлов
-                    this.tileLayer.addChild(chunkContainer);
+                    // Проверяем, что чанк имеет детей (тайлы)
+                    if (chunkContainer.children.length === 0) {
+                        // Если чанк пустой, пересоздаем его
+                        const chunkKey = `${chunk.chunkX},${chunk.chunkY}`;
+                        this.chunkCache.delete(chunkKey);
+                        const newChunkContainer = this.createChunkContainer(chunk);
+                        this.chunkCache.set(chunkKey, newChunkContainer);
+                        this.tileLayer.addChild(newChunkContainer);
+                    } else {
+                        // Добавляем контейнер чанка к слою тайлов
+                        this.tileLayer.addChild(chunkContainer);
+                    }
                 }
             }
         } else {
@@ -1283,6 +1418,44 @@ class PIXIRenderer {
     }
 
     /**
+     * Создание резервной текстуры (если основная не создана)
+     * @param {number} tileSize - размер тайла
+     * @param {number} color - цвет текстуры
+     * @returns {PIXI.Texture} - резервная текстура
+     */
+    createFallbackTexture(tileSize, color) {
+        const width = Math.max(tileSize, 2);
+        const height = Math.max(Math.floor(tileSize / 2), 2);
+        
+        // Создаём через canvas + BaseTexture - это самый надёжный способ
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#' + color.toString(16).padStart(6, '0');
+        ctx.fillRect(0, 0, width, height);
+
+        // Создаём BaseTexture и Texture
+        const baseTexture = new PIXI.BaseTexture(canvas);
+        const texture = new PIXI.Texture(baseTexture);
+        
+        // Проверяем, что текстура имеет размеры
+        if (texture.width <= 0 || texture.height <= 0) {
+            // Если размеры не установились автоматически, создаём минимальную текстуру
+            const minCanvas = document.createElement('canvas');
+            minCanvas.width = 2;
+            minCanvas.height = 2;
+            const minCtx = minCanvas.getContext('2d');
+            minCtx.fillStyle = '#FF00FF';
+            minCtx.fillRect(0, 0, 2, 2);
+            
+            return new PIXI.Texture(new PIXI.BaseTexture(minCanvas));
+        }
+        
+        return texture;
+    }
+
+    /**
      * Создание спрайта пола
      * @param {number} x - X координата
      * @param {number} y - Y координата
@@ -1290,18 +1463,34 @@ class PIXIRenderer {
      * @returns {PIXI.Sprite} - спрайт пола
      */
     createFloorTile(x, y, tileSize) {
-        const texture = this.tileTextures.get(0);
+        let texture = this.tileTextures.get(0);
+
+        // Если текстура не создана, создаем резервную
+        if (!texture || !texture.valid) {
+            texture = this.createFloorTexture(tileSize);
+            if (texture && texture.valid) {
+                this.tileTextures.set(0, texture);
+            } else {
+                texture = this.createFallbackTexture(tileSize, 0x556B2F);
+                this.tileTextures.set(0, texture);
+            }
+        }
+
+        // Защита от некорректных размеров текстуры
+        const textureWidth = texture.width || tileSize;
+        const textureHeight = texture.height || Math.max(Math.floor(tileSize / 2), 2);
+
         const sprite = new PIXI.Sprite(texture);
-        
+
         // Масштабируем спрайт до нужного размера
-        const scaleX = tileSize / texture.width;
-        const scaleY = (tileSize / 2) / texture.height;
+        const scaleX = tileSize / textureWidth;
+        const scaleY = (tileSize / 2) / textureHeight;
         sprite.scale.set(scaleX, scaleY);
-        
+
         // Устанавливаем позицию
         sprite.x = x;
         sprite.y = y;
-        
+
         return sprite;
     }
 
@@ -1313,18 +1502,35 @@ class PIXIRenderer {
      * @returns {PIXI.Sprite} - спрайт стены
      */
     createWallTile(x, y, tileSize) {
-        const texture = this.tileTextures.get(1);
+        let texture = this.tileTextures.get(1);
+
+        // Если текстура не создана, создаем резервную
+        if (!texture || !texture.valid) {
+            texture = this.createWallTexture(tileSize);
+            if (texture && texture.valid) {
+                this.tileTextures.set(1, texture);
+            } else {
+                // Создаем простую текстуру программно
+                texture = this.createFallbackTexture(tileSize, 0x8B7355);
+                this.tileTextures.set(1, texture);
+            }
+        }
+
+        // Защита от некорректных размеров текстуры
+        const textureWidth = texture.width || tileSize;
+        const textureHeight = texture.height || Math.max(Math.floor(tileSize / 2), 2);
+
         const sprite = new PIXI.Sprite(texture);
-        
+
         // Масштабируем спрайт до нужного размера
-        const scaleX = tileSize / texture.width;
-        const scaleY = (tileSize / 2) / texture.height;
+        const scaleX = tileSize / textureWidth;
+        const scaleY = (tileSize / 2) / textureHeight;
         sprite.scale.set(scaleX, scaleY);
-        
+
         // Устанавливаем позицию
         sprite.x = x;
         sprite.y = y;
-        
+
         return sprite;
     }
 
@@ -1336,18 +1542,34 @@ class PIXIRenderer {
      * @returns {PIXI.Sprite} - спрайт колонны
      */
     createColumnTile(x, y, tileSize) {
-        const texture = this.tileTextures.get(2);
+        let texture = this.tileTextures.get(2);
+
+        // Если текстура не создана, создаем резервную
+        if (!texture || !texture.valid) {
+            texture = this.createColumnTexture(tileSize);
+            if (texture && texture.valid) {
+                this.tileTextures.set(2, texture);
+            } else {
+                texture = this.createFallbackTexture(tileSize, 0x696969);
+                this.tileTextures.set(2, texture);
+            }
+        }
+
+        // Защита от некорректных размеров текстуры
+        const textureWidth = texture.width || tileSize;
+        const textureHeight = texture.height || Math.max(Math.floor(tileSize / 2), 2);
+
         const sprite = new PIXI.Sprite(texture);
-        
+
         // Масштабируем спрайт до нужного размера
-        const scaleX = tileSize / texture.width;
-        const scaleY = (tileSize / 2) / texture.height;
+        const scaleX = tileSize / textureWidth;
+        const scaleY = (tileSize / 2) / textureHeight;
         sprite.scale.set(scaleX, scaleY);
-        
+
         // Устанавливаем позицию
         sprite.x = x;
         sprite.y = y;
-        
+
         return sprite;
     }
 
@@ -1359,18 +1581,34 @@ class PIXIRenderer {
      * @returns {PIXI.Sprite} - спрайт дерева
      */
     createTreeTile(x, y, tileSize) {
-        const texture = this.tileTextures.get(3);
+        let texture = this.tileTextures.get(3);
+
+        // Если текстура не создана, создаем резервную
+        if (!texture || !texture.valid) {
+            texture = this.createTreeTexture(tileSize);
+            if (texture && texture.valid) {
+                this.tileTextures.set(3, texture);
+            } else {
+                texture = this.createFallbackTexture(tileSize, 0x228B22);
+                this.tileTextures.set(3, texture);
+            }
+        }
+
+        // Защита от некорректных размеров текстуры
+        const textureWidth = texture.width || tileSize;
+        const textureHeight = texture.height || Math.max(Math.floor(tileSize / 2), 2);
+
         const sprite = new PIXI.Sprite(texture);
-        
+
         // Масштабируем спрайт до нужного размера
-        const scaleX = tileSize / texture.width;
-        const scaleY = (tileSize / 2) / texture.height;
+        const scaleX = tileSize / textureWidth;
+        const scaleY = (tileSize / 2) / textureHeight;
         sprite.scale.set(scaleX, scaleY);
-        
+
         // Устанавливаем позицию
         sprite.x = x;
         sprite.y = y;
-        
+
         return sprite;
     }
 
@@ -1382,18 +1620,34 @@ class PIXIRenderer {
      * @returns {PIXI.Sprite} - спрайт скалы
      */
     createRockTile(x, y, tileSize) {
-        const texture = this.tileTextures.get(4);
+        let texture = this.tileTextures.get(4);
+
+        // Если текстура не создана, создаем резервную
+        if (!texture || !texture.valid) {
+            texture = this.createRockTexture(tileSize);
+            if (texture && texture.valid) {
+                this.tileTextures.set(4, texture);
+            } else {
+                texture = this.createFallbackTexture(tileSize, 0x808080);
+                this.tileTextures.set(4, texture);
+            }
+        }
+
+        // Защита от некорректных размеров текстуры
+        const textureWidth = texture.width || tileSize;
+        const textureHeight = texture.height || Math.max(Math.floor(tileSize / 2), 2);
+
         const sprite = new PIXI.Sprite(texture);
-        
+
         // Масштабируем спрайт до нужного размера
-        const scaleX = tileSize / texture.width;
-        const scaleY = (tileSize / 2) / texture.height;
+        const scaleX = tileSize / textureWidth;
+        const scaleY = (tileSize / 2) / textureHeight;
         sprite.scale.set(scaleX, scaleY);
-        
+
         // Устанавливаем позицию
         sprite.x = x;
         sprite.y = y;
-        
+
         return sprite;
     }
 
@@ -1405,18 +1659,34 @@ class PIXIRenderer {
      * @returns {PIXI.Sprite} - спрайт воды
      */
     createWaterTile(x, y, tileSize) {
-        const texture = this.tileTextures.get(5);
+        let texture = this.tileTextures.get(5);
+
+        // Если текстура не создана, создаем резервную
+        if (!texture || !texture.valid) {
+            texture = this.createWaterTexture(tileSize);
+            if (texture && texture.valid) {
+                this.tileTextures.set(5, texture);
+            } else {
+                texture = this.createFallbackTexture(tileSize, 0x1976d2);
+                this.tileTextures.set(5, texture);
+            }
+        }
+
+        // Защита от некорректных размеров текстуры
+        const textureWidth = texture.width || tileSize;
+        const textureHeight = texture.height || Math.max(Math.floor(tileSize / 2), 2);
+
         const sprite = new PIXI.Sprite(texture);
-        
+
         // Масштабируем спрайт до нужного размера
-        const scaleX = tileSize / texture.width;
-        const scaleY = (tileSize / 2) / texture.height;
+        const scaleX = tileSize / textureWidth;
+        const scaleY = (tileSize / 2) / textureHeight;
         sprite.scale.set(scaleX, scaleY);
-        
+
         // Устанавливаем позицию
         sprite.x = x;
         sprite.y = y;
-        
+
         return sprite;
     }
 
@@ -1428,18 +1698,34 @@ class PIXIRenderer {
      * @returns {PIXI.Sprite} - спрайт льда
      */
     createIceTile(x, y, tileSize) {
-        const texture = this.tileTextures.get(6);
+        let texture = this.tileTextures.get(6);
+
+        // Если текстура не создана, создаем резервную
+        if (!texture || !texture.valid) {
+            texture = this.createIceTexture(tileSize);
+            if (texture && texture.valid) {
+                this.tileTextures.set(6, texture);
+            } else {
+                texture = this.createFallbackTexture(tileSize, 0xbbdefb);
+                this.tileTextures.set(6, texture);
+            }
+        }
+
+        // Защита от некорректных размеров текстуры
+        const textureWidth = texture.width || tileSize;
+        const textureHeight = texture.height || Math.max(Math.floor(tileSize / 2), 2);
+
         const sprite = new PIXI.Sprite(texture);
-        
+
         // Масштабируем спрайт до нужного размера
-        const scaleX = tileSize / texture.width;
-        const scaleY = (tileSize / 2) / texture.height;
+        const scaleX = tileSize / textureWidth;
+        const scaleY = (tileSize / 2) / textureHeight;
         sprite.scale.set(scaleX, scaleY);
-        
+
         // Устанавливаем позицию
         sprite.x = x;
         sprite.y = y;
-        
+
         return sprite;
     }
 
@@ -1451,18 +1737,34 @@ class PIXIRenderer {
      * @returns {PIXI.Sprite} - спрайт декорации
      */
     createDecorationTile(x, y, tileSize) {
-        const texture = this.tileTextures.get(7);
+        let texture = this.tileTextures.get(7);
+
+        // Если текстура не создана, создаем резервную
+        if (!texture || !texture.valid) {
+            texture = this.createDecorationTexture(tileSize);
+            if (texture && texture.valid) {
+                this.tileTextures.set(7, texture);
+            } else {
+                texture = this.createFallbackTexture(tileSize, 0x8bc34a);
+                this.tileTextures.set(7, texture);
+            }
+        }
+
+        // Защита от некорректных размеров текстуры
+        const textureWidth = texture.width || tileSize;
+        const textureHeight = texture.height || Math.max(Math.floor(tileSize / 2), 2);
+
         const sprite = new PIXI.Sprite(texture);
-        
+
         // Масштабируем спрайт до нужного размера
-        const scaleX = tileSize / texture.width;
-        const scaleY = (tileSize / 2) / texture.height;
+        const scaleX = tileSize / textureWidth;
+        const scaleY = (tileSize / 2) / textureHeight;
         sprite.scale.set(scaleX, scaleY);
-        
+
         // Устанавливаем позицию
         sprite.x = x;
         sprite.y = y;
-        
+
         return sprite;
     }
 
@@ -1491,7 +1793,26 @@ class PIXIRenderer {
         let characterSprite = this.entitySprites.get(character);
         if (!characterSprite) {
             // Создаем спрайт с текстурой игрока
-            const texture = this.entityTextures.get('player');
+            let texture = this.entityTextures.get('player');
+            if (!texture || !texture.valid) {
+                console.warn('Текстура игрока невалидна, создаем резервную');
+                texture = this.createFallbackTexture(32, 0x4a9eff);
+                this.entityTextures.set('player', texture);
+            }
+            
+            // Гарантируем, что текстура валидна
+            if (!texture || !texture.valid) {
+                // Последняя попытка создать текстуру через canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = 32;
+                canvas.height = 32;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#4a9eff';
+                ctx.fillRect(0, 0, 32, 32);
+                texture = new PIXI.Texture(new PIXI.BaseTexture(canvas));
+                this.entityTextures.set('player', texture);
+            }
+            
             characterSprite = new PIXI.Sprite(texture);
             this.entitySprites.set(character, characterSprite);
             this.objectLayer.addChild(characterSprite);
@@ -1570,6 +1891,87 @@ class PIXIRenderer {
     }
 
     /**
+     * Рендеринг выпавших предметов
+     * @param {Array} drops - массив выпавших предметов
+     * @param {Object} hoveredDrop - подсвеченный предмет
+     */
+    renderItems(drops, hoveredDrop = null) {
+        for (const drop of drops) {
+            if (drop.pickedUp) continue;
+
+            const isHovered = hoveredDrop && drop === hoveredDrop;
+
+            // Получаем canvas для получения размеров экрана
+            const canvas = this.app.view;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            // Преобразуем координаты предмета в экранные с учетом камеры и зума
+            const screenX = centerX + (drop.displayX - this.camera.x) * this.camera.zoom;
+            const screenY = centerY + (drop.displayY - this.camera.y) * this.camera.zoom;
+
+            // Размеры с учетом зума
+            const scaledWidth = drop.width * this.camera.zoom;
+            const scaledHeight = drop.height * this.camera.zoom;
+
+            // Создаем или обновляем спрайт предмета
+            let itemSprite = this.entitySprites.get(drop);
+            if (!itemSprite) {
+                // Создаем контейнер для предмета
+                itemSprite = new PIXI.Container();
+
+                // Создаем фон предмета
+                const background = new PIXI.Graphics();
+                itemSprite.addChild(background);
+
+                // Создаем рамку предмета
+                const border = new PIXI.Graphics();
+                itemSprite.addChild(border);
+
+                // Создаем текст названия предмета
+                const textColor = drop.item.getColorByRarity();
+                const text = new PIXI.Text(drop.item.name, {
+                    fontFamily: 'Arial',
+                    fontSize: 10 * this.camera.zoom,
+                    fill: this.hexToDecimal(textColor),
+                    align: 'center'
+                });
+                text.anchor.set(0.5);
+                itemSprite.addChild(text);
+
+                this.entitySprites.set(drop, itemSprite);
+                this.objectLayer.addChild(itemSprite);
+            }
+
+            // Обновляем позицию и масштаб
+            itemSprite.x = screenX;
+            itemSprite.y = screenY;
+            itemSprite.scale.set(1, 1); // Не масштабируем контейнер, так как текст уже масштабирован
+
+            // Обновляем фон
+            const background = itemSprite.children[0];
+            background.clear();
+            background.beginFill(0xFFFFFF, isHovered ? 0.4 : 0.2);
+            background.drawRect(-scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight);
+            background.endFill();
+
+            // Обновляем рамку
+            const border = itemSprite.children[1];
+            border.clear();
+            border.lineStyle(2 * this.camera.zoom, this.hexToDecimal(drop.item.getColorByRarity()));
+            border.drawRect(-scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight);
+
+            // Обновляем текст (пересоздаем если изменился размер или цвет)
+            const text = itemSprite.children[2];
+            if (text.text !== drop.item.name) {
+                text.text = drop.item.name;
+            }
+            text.position.set(screenX, screenY);
+            text.scale.set(this.camera.zoom, this.camera.zoom);
+        }
+    }
+
+    /**
      * Рендеринг врага
      * @param {Object} enemy - объект врага
      */
@@ -1594,7 +1996,34 @@ class PIXIRenderer {
                     break;
             }
 
-            const texture = this.entityTextures.get(textureKey);
+            let texture = this.entityTextures.get(textureKey);
+            if (!texture || !texture.valid) {
+                console.warn(`Текстура врага ${textureKey} невалидна, создаем резервную`);
+                const fallbackColor = enemy.type === 'weak' ? 0xa0a0a0 :
+                                      enemy.type === 'strong' ? 0xff6600 :
+                                      enemy.type === 'fast' ? 0xffff00 :
+                                      enemy.type === 'tank' ? 0x8b0000 : 0xff4a4a;
+                texture = this.createFallbackTexture(32, fallbackColor);
+                this.entityTextures.set(textureKey, texture);
+            }
+            
+            // Гарантируем, что текстура валидна
+            if (!texture || !texture.valid) {
+                // Последняя попытка создать текстуру через canvas
+                const fallbackColor = enemy.type === 'weak' ? 0xa0a0a0 :
+                                      enemy.type === 'strong' ? 0xff6600 :
+                                      enemy.type === 'fast' ? 0xffff00 :
+                                      enemy.type === 'tank' ? 0x8b0000 : 0xff4a4a;
+                const canvas = document.createElement('canvas');
+                canvas.width = 32;
+                canvas.height = 32;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#' + fallbackColor.toString(16).padStart(6, '0');
+                ctx.fillRect(0, 0, 32, 32);
+                texture = new PIXI.Texture(new PIXI.BaseTexture(canvas));
+                this.entityTextures.set(textureKey, texture);
+            }
+
             enemySprite = new PIXI.Sprite(texture);
             this.entitySprites.set(enemy, enemySprite);
             this.objectLayer.addChild(enemySprite);
