@@ -1030,9 +1030,10 @@ class PIXIRenderer {
                 const tileType = chunk.tiles[y][x];
 
                 // Преобразуем локальные координаты тайла в 2D координаты
+                // Добавляем смещение +0.5 для центрирования тайла в изометрической проекции
                 const globalX = chunk.chunkX * chunk.size + x;
                 const globalY = chunk.chunkY * chunk.size + y;
-                const pos = this.isoTo2D(globalX, globalY);
+                const pos = this.isoTo2D(globalX - 1, globalY);
 
                 // Получаем текстуру через ленивую загрузку
                 const texture = this.getTileTexture(tileType);
@@ -2401,9 +2402,10 @@ class PIXIRenderer {
                             const tileType = chunk.tiles[y][x];
 
                             // Преобразуем глобальные координаты тайла в 2D координаты
+                            // Добавляем смещение +0.5 для центрирования тайла в изометрической проекции
                             const globalX = chunk.chunkX * chunk.size + x;
                             const globalY = chunk.chunkY * chunk.size + y;
-                            const pos = this.isoTo2D(globalX, globalY);
+                            const pos = this.isoTo2D(globalX + 0.5, globalY + 0.5);
 
                             // Проверяем, находится ли тайл в пределах экрана
                             // Преобразуем мировые координаты в экранные для проверки видимости

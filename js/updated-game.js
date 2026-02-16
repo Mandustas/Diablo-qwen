@@ -329,6 +329,19 @@ class Game {
         if (GAME_CONFIG.DEBUG.TELEPORT_ON_RIGHT_CLICK && e.button === 2) { // Правая кнопка мыши
             e.preventDefault(); // Предотвращаем контекстное меню
 
+            // Получаем информацию о тайле для отладки
+            const tilePos = getTileIndex(worldX, worldY);
+            const tileType = this.chunkSystem.getTileType(tilePos.tileX, tilePos.tileY);
+            const isPassable = this.chunkSystem.isPassable(tilePos.tileX, tilePos.tileY);
+            
+            // Выводим отладочную информацию
+            console.log('=== Информация о тайле (ПКМ) ===');
+            console.log(`Координаты клика (мировые): X=${worldX.toFixed(2)}, Y=${worldY.toFixed(2)}`);
+            console.log(`Координаты тайла: tileX=${tilePos.tileX}, tileY=${tilePos.tileY}`);
+            console.log(`Тип тайла: ${tileType} (${this.getTileTypeName(tileType)})`);
+            console.log(`Проходимость: ${isPassable ? 'проходим' : 'непроходим'}`);
+            console.log('================================');
+
             // Телепортируем персонажа в точку клика
             this.teleportTo(worldX, worldY);
             return;
@@ -491,29 +504,15 @@ class Game {
      * Телепортация персонажа в точку (для отладки)
      */
     teleportTo(targetX, targetY) {
-        // Проверяем, можно ли телепортироваться в эту точку (проверяем проходимость)
-        let tilePos;
-        if (typeof getTileIndex !== 'undefined') {
-            tilePos = getTileIndex(targetX, targetY);
-        } else {
-            // Резервный вариант, если функция недоступна
-            tilePos = { tileX: Math.floor(targetX / GAME_CONFIG.TILE_DIMENSIONS.WIDTH), tileY: Math.floor(targetY / GAME_CONFIG.TILE_DIMENSIONS.HEIGHT) };
-        }
+        // Проверяем, нет ли врага в целевой позиции
+        if (!this.checkCharacterEnemyCollision(targetX, targetY)) {
+            // Телепортируем персонажа независимо от проходимости тайла (для отладки)
+            this.character.x = targetX;
+            this.character.y = targetY;
 
-        // Проверяем, является ли тайл проходимым
-        if (this.isPassable(tilePos.tileX, tilePos.tileY)) {
-            // Проверяем, нет ли врага в целевой позиции
-            if (!this.checkCharacterEnemyCollision(targetX, targetY)) {
-                // Телепортируем персонажа
-                this.character.x = targetX;
-                this.character.y = targetY;
-
-                console.log(`Телепортирован в точку: (${targetX}, ${targetY})`);
-            } else {
-                console.log('Невозможно телепортироваться: враг в целевой позиции');
-            }
+            console.log(`Телепортирован в точку: (${targetX}, ${targetY})`);
         } else {
-            console.log('Невозможно телепортироваться: непроходимый тайл');
+            console.log('Невозможно телепортироваться: враг в целевой позиции');
         }
     }
 
@@ -797,6 +796,25 @@ class Game {
     isPassable(tileX, tileY) {
         // Используем chunkSystem для проверки проходимости
         return this.chunkSystem.isPassable(tileX, tileY);
+    }
+
+    /**
+     * Получение названия тайла по типу
+     * @param {number} tileType - тип тайла
+     * @returns {string} - название тайла
+     */
+    getTileTypeName(tileType) {
+        const tileNames = {
+            0: 'пол',
+            1: 'стена',
+            2: 'колонна',
+            3: 'дерево',
+            4: 'скала',
+            5: 'вода',
+            6: 'лёд',
+            7: 'декорация'
+        };
+        return tileNames[tileType] || 'неизвестный';
     }
 
     /**
