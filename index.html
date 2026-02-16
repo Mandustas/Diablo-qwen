@@ -164,11 +164,54 @@
         #characterStats {
             display: none;
         }
+
+        /* Координаты персонажа */
+        #coordinates {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: linear-gradient(to bottom, #1a1414 0%, #0d0a0a 100%);
+            border: 2px solid #3a2a1a;
+            padding: 10px 15px;
+            color: #c9b896;
+            font-family: 'MedievalSharp', Georgia, serif;
+            font-size: 14px;
+            text-shadow: 1px 1px 2px #000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6), inset 0 0 10px rgba(74,58,42,0.2);
+            z-index: 10;
+            pointer-events: none;
+            min-width: 200px;
+        }
+
+        #coordinates .coords-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 5px;
+        }
+
+        #coordinates .coords-row span {
+            white-space: nowrap;
+        }
+
+        #coordinates .tile-coords {
+            color: #8a7a6a;
+            font-size: 12px;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
     <div id="gameContainer">
         <canvas id="gameCanvas"></canvas>
+
+        <!-- Координаты персонажа -->
+        <div id="coordinates">
+            <div class="coords-row">
+                <span>X: <span id="coordX">0</span></span>
+                <span>Y: <span id="coordY">0</span></span>
+            </div>
+            <div class="tile-coords">Тайл: <span id="tileX">0</span>, <span id="tileY">0</span></div>
+        </div>
         
         <!-- Top Right Buttons -->
         <div id="topButtons">

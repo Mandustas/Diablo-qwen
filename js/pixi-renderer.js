@@ -1823,7 +1823,7 @@ class PIXIRenderer {
                 texture = this.createFallbackTexture(32, 0x4a9eff);
                 this.entityTextures.set('player', texture);
             }
-            
+
             // Гарантируем, что текстура валидна
             if (!texture || !texture.valid) {
                 // Последняя попытка создать текстуру через canvas
@@ -1836,8 +1836,10 @@ class PIXIRenderer {
                 texture = new PIXI.Texture(new PIXI.BaseTexture(canvas));
                 this.entityTextures.set('player', texture);
             }
-            
+
             characterSprite = new PIXI.Sprite(texture);
+            // Устанавливаем точку привязки к нижнему центру (ноги персонажа)
+            characterSprite.anchor.set(0.5, 1);
             this.entitySprites.set(character, characterSprite);
             this.objectLayer.addChild(characterSprite);
         } else if (!characterSprite.parent) {
@@ -1949,7 +1951,7 @@ class PIXIRenderer {
                 texture = this.createFallbackTexture(32, fallbackColor);
                 this.entityTextures.set(textureKey, texture);
             }
-            
+
             // Гарантируем, что текстура валидна
             if (!texture || !texture.valid) {
                 // Последняя попытка создать текстуру через canvas
@@ -1968,6 +1970,8 @@ class PIXIRenderer {
             }
 
             enemySprite = new PIXI.Sprite(texture);
+            // Устанавливаем точку привязки к нижнему центру (ноги врага)
+            enemySprite.anchor.set(0.5, 1);
             this.entitySprites.set(enemy, enemySprite);
             this.objectLayer.addChild(enemySprite);
         } else if (!enemySprite.parent) {

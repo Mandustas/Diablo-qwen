@@ -918,6 +918,15 @@ class Game {
         document.getElementById('manaValue').textContent = Math.floor(this.character.mana);
         document.getElementById('levelValue').textContent = this.character.level;
 
+        // Обновляем координаты персонажа
+        document.getElementById('coordX').textContent = Math.floor(this.character.x);
+        document.getElementById('coordY').textContent = Math.floor(this.character.y);
+
+        // Обновляем координаты тайла
+        const tilePos = getTileIndex(this.character.x, this.character.y);
+        document.getElementById('tileX').textContent = tilePos.tileX;
+        document.getElementById('tileY').textContent = tilePos.tileY;
+
         // Обновляем дерево навыков, если оно открыто
         this.skillTree.onCharacterUpdate();
 
