@@ -185,19 +185,24 @@ class ChunkSystem {
     }
 
     getChunksToRender(cameraX, cameraY, screenWidth, screenHeight, tileSize = 64) {
-        // Определяем центр экрана в пиксельных координатах мира
-        const centerWorldX = cameraX + screenWidth / 2;
-        const centerWorldY = cameraY + screenHeight / 2;
-        
-        // Конвертируем пиксельные координаты центра экрана в тайловые координаты
+        // Определяем центр экрана в мировых координатах с учётом зума
+        // cameraX и cameraY - это мировые координаты центра камеры
+        const centerWorldX = cameraX;
+        const centerWorldY = cameraY;
+
+        // Конвертируем мировые координаты центра в тайловые координаты
         const isoCoords = coordToIso(centerWorldX, centerWorldY);
-        const centerChunkX = Math.floor(isoCoords.isoX / this.chunkSize);
-        const centerChunkY = Math.floor(isoCoords.isoY / this.chunkSize);
+        const centerTileX = isoCoords.isoX;
+        const centerTileY = isoCoords.isoY;
         
+        // Вычисляем центральный чанк
+        const centerChunkX = Math.floor(centerTileX / this.chunkSize);
+        const centerChunkY = Math.floor(centerTileY / this.chunkSize);
+
         // Рассчитываем радиус рендеринга с запасом, чтобы покрыть весь экран
-        // Учитываем изометрическую проекцию — экран покрывает больше чанков по диагонали
-        const tilesOnScreenX = Math.ceil(screenWidth / (tileSize / 2));
-        const tilesOnScreenY = Math.ceil(screenHeight / (tileSize / 4));
+        // Учитываем изометрическую проекцию и зум
+        const tilesOnScreenX = Math.ceil((screenWidth / tileSize) * 2);
+        const tilesOnScreenY = Math.ceil((screenHeight / (tileSize / 2)) * 2);
         const renderRadius = Math.max(3, Math.ceil(Math.max(tilesOnScreenX, tilesOnScreenY) / this.chunkSize)) + 2;
         
         const chunksToRender = [];

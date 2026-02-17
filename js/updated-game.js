@@ -6,7 +6,7 @@ let game;
 
 class Game {
     constructor() {
-        this.renderer = new Renderer('gameCanvas');
+        this.renderer = new PIXIRenderer('gameCanvas');
 
         // Инициализируем систему чанков со связной генерацией карты
         this.chunkSystem = new ConnectedChunkSystem(GAME_CONFIG.INITIAL_CHUNK_SIZE); // Чанки размером 16x16 тайлов
@@ -75,19 +75,19 @@ class Game {
         window.addEventListener('resize', () => this.handleResize());
         this.handleResize(); // Установить начальный размер
     }
-    
+
     /**
      * Обработка изменения размера окна
      */
     handleResize() {
         const container = document.getElementById('gameContainer');
         if (!container) return;
-        
+
         const width = container.clientWidth;
         const height = container.clientHeight;
-        
-        this.renderer.canvas.width = width;
-        this.renderer.canvas.height = height;
+
+        // В PIXI размер холста управляется приложением
+        this.renderer.app.renderer.resize(width, height);
     }
 
     /**
@@ -129,24 +129,24 @@ class Game {
         });
 
         // Обработка кликов мыши
-        this.renderer.canvas.addEventListener('mousedown', (e) => {
+        this.renderer.app.view.addEventListener('mousedown', (e) => {
             this.handleClick(e);
         });
 
         // Обработка движения мыши для подсветки предметов
-        this.renderer.canvas.addEventListener('mousemove', (e) => {
+        this.renderer.app.view.addEventListener('mousemove', (e) => {
             this.handleMouseMove(e);
         });
 
         // Обработка контекстного меню (для правого клика)
-        this.renderer.canvas.addEventListener('contextmenu', (e) => {
+        this.renderer.app.view.addEventListener('contextmenu', (e) => {
             if (GAME_CONFIG.DEBUG.TELEPORT_ON_RIGHT_CLICK) {
                 e.preventDefault(); // Предотвращаем контекстное меню при включенной отладке телепортации
             }
         });
 
         // Обработка зуммирования колесиком мыши
-        this.renderer.canvas.addEventListener('wheel', (e) => {
+        this.renderer.app.view.addEventListener('wheel', (e) => {
             e.preventDefault();
             this.handleZoom(e);
         }, { passive: false });
@@ -201,24 +201,24 @@ class Game {
         document.getElementById('loadButton').addEventListener('click', () => {
             this.saveSystem.loadGame();
         });
-        
+
         // Обработка кнопок меню паузы
         document.getElementById('resumeButton').addEventListener('click', () => {
             this.togglePauseMenu();
         });
-        
+
         document.getElementById('exitButton').addEventListener('click', () => {
             // Выход в главное меню (перезагрузка страницы)
             location.reload();
         });
     }
-    
+
     /**
      * Переключение меню паузы
      */
     togglePauseMenu() {
         const pauseMenu = document.getElementById('pauseMenu');
-        
+
         if (this.gameState === 'playing') {
             this.gameState = 'paused';
             pauseMenu.classList.add('active');
@@ -227,7 +227,7 @@ class Game {
             pauseMenu.classList.remove('active');
         }
     }
-    
+
     /**
      * Обработка нажатия пробела
      */
@@ -242,18 +242,18 @@ class Game {
             }
         }
     }
-    
+
     /**
      * Обработка горячих клавиш навыков
      * @param {number} skillNumber - номер навыка (1-9)
      */
     handleSkillHotkey(skillNumber) {
         if (this.gameState !== 'playing') return;
-        
+
         // Используем панель навыков для вызова навыка
         this.skillBar.useSkillInSlot(skillNumber);
     }
-    
+
     /**
      * Атака ближайших врагов
      */
@@ -272,12 +272,12 @@ class Game {
 
                 // Если враг умер, удаляем его
                 if (!enemy.isAlive()) {
-                    // Добаваем опыт за убийство будет обработан в основном цикле
+                    // Добавляем опыт за убийство будет обработан в основном цикле
                 }
             }
         }
     }
-    
+
     /**
      * Использование навыка на ближайших врагов
      * @param {string} skillName - название навыка
@@ -306,20 +306,20 @@ class Game {
             console.log(`Использован навык ${skillName} без цели, результат: ${result}`);
         }
     }
-    
+
     /**
      * Обработка клика мыши
      */
     handleClick(e) {
         if (this.gameState !== 'playing') return;
 
-        const rect = this.renderer.canvas.getBoundingClientRect();
+        const rect = this.renderer.app.view.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
 
         // Центр экрана
-        const centerX = this.renderer.canvas.width / 2;
-        const centerY = this.renderer.canvas.height / 2;
+        const centerX = this.renderer.app.screen.width / 2;
+        const centerY = this.renderer.app.screen.height / 2;
 
         // Преобразуем координаты клика в мировые координаты с учетом зума
         const worldX = (mouseX - centerX) / this.renderer.camera.zoom + this.renderer.camera.x;
@@ -328,6 +328,19 @@ class Game {
         // Проверяем, включена ли отладка телепортации по правому клику
         if (GAME_CONFIG.DEBUG.TELEPORT_ON_RIGHT_CLICK && e.button === 2) { // Правая кнопка мыши
             e.preventDefault(); // Предотвращаем контекстное меню
+
+            // Получаем информацию о тайле для отладки
+            const tilePos = getTileIndex(worldX, worldY);
+            const tileType = this.chunkSystem.getTileType(tilePos.tileX, tilePos.tileY);
+            const isPassable = this.chunkSystem.isPassable(tilePos.tileX, tilePos.tileY);
+            
+            // Выводим отладочную информацию
+            console.log('=== Информация о тайле (ПКМ) ===');
+            console.log(`Координаты клика (мировые): X=${worldX.toFixed(2)}, Y=${worldY.toFixed(2)}`);
+            console.log(`Координаты тайла: tileX=${tilePos.tileX}, tileY=${tilePos.tileY}`);
+            console.log(`Тип тайла: ${tileType} (${this.getTileTypeName(tileType)})`);
+            console.log(`Проходимость: ${isPassable ? 'проходим' : 'непроходим'}`);
+            console.log('================================');
 
             // Телепортируем персонажа в точку клика
             this.teleportTo(worldX, worldY);
@@ -364,11 +377,11 @@ class Game {
                     } else {
                         // Если не удалось подобрать подсвеченный предмет, пробуем обычный способ
                         const pickedUpAtCoords = this.itemDropSystem.tryPickupAt(worldX, worldY, this.character);
-                        
+
                         if (!pickedUpAtCoords) {
                             // Если не подобрали предмет по точным координатам клика, пробуем подобрать ближайший
                             const nearestPickedUp = this.itemDropSystem.tryPickupNearest(this.character);
-                            
+
                             if (!nearestPickedUp) {
                                 // Если и ближайший не подобрали, перемещаем персонажа к точке клика
                                 this.moveTo(worldX, worldY);
@@ -382,12 +395,12 @@ class Game {
                 } else {
                     // Если нет подсвеченного предмета, используем старую логику
                     const pickedUp = this.itemDropSystem.tryPickupAt(worldX, worldY, this.character);
-                    
+
                     // Если не подобрали предмет по точным координатам клика, пробуем подобрать ближайший
                     if (!pickedUp) {
                         // Проверяем, есть ли ближайшие предметы в радиусе pickup
                         const nearestPickedUp = this.itemDropSystem.tryPickupNearest(this.character);
-                        
+
                         if (!nearestPickedUp) {
                             // Если и ближайший не подобрали, перемещаем персонажа к точке клика
                             this.moveTo(worldX, worldY);
@@ -411,7 +424,7 @@ class Game {
     handleMouseMove(e) {
         if (this.gameState !== 'playing') return;
 
-        const rect = this.renderer.canvas.getBoundingClientRect();
+        const rect = this.renderer.app.view.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
 
@@ -423,9 +436,9 @@ class Game {
 
         // Меняем курсор в зависимости от того, находится ли курсор над предметом
         if (hoveredDrop) {
-            this.renderer.canvas.style.cursor = 'pointer'; // Меняем курсор на указатель при наведении на предмет
+            this.renderer.app.view.style.cursor = 'pointer'; // Меняем курсор на указатель при наведении на предмет
         } else {
-            this.renderer.canvas.style.cursor = 'default'; // Возвращаем стандартный курсор
+            this.renderer.app.view.style.cursor = 'default'; // Возвращаем стандартный курсор
         }
     }
 
@@ -438,10 +451,10 @@ class Game {
     getEnemyAtPosition(x, y) {
         for (const enemy of this.enemies) {
             const distance = Math.sqrt(
-                Math.pow(enemy.x - x, 2) + 
+                Math.pow(enemy.x - x, 2) +
                 Math.pow(enemy.y - y, 2)
             );
-            
+
             // Проверяем, находится ли точка в пределах хитбокса врага
             // hitboxRadius - это радиус в мировых координатах
             if (distance <= enemy.hitboxRadius) {
@@ -450,7 +463,7 @@ class Game {
         }
         return null;
     }
-    
+
     /**
      * Перемещение персонажа к точке
      */
@@ -491,32 +504,18 @@ class Game {
      * Телепортация персонажа в точку (для отладки)
      */
     teleportTo(targetX, targetY) {
-        // Проверяем, можно ли телепортироваться в эту точку (проверяем проходимость)
-        let tilePos;
-        if (typeof getTileIndex !== 'undefined') {
-            tilePos = getTileIndex(targetX, targetY);
-        } else {
-            // Резервный вариант, если функция недоступна
-            tilePos = { tileX: Math.floor(targetX / GAME_CONFIG.TILE_DIMENSIONS.WIDTH), tileY: Math.floor(targetY / GAME_CONFIG.TILE_DIMENSIONS.HEIGHT) };
-        }
+        // Проверяем, нет ли врага в целевой позиции
+        if (!this.checkCharacterEnemyCollision(targetX, targetY)) {
+            // Телепортируем персонажа независимо от проходимости тайла (для отладки)
+            this.character.x = targetX;
+            this.character.y = targetY;
 
-        // Проверяем, является ли тайл проходимым
-        if (this.isPassable(tilePos.tileX, tilePos.tileY)) {
-            // Проверяем, нет ли врага в целевой позиции
-            if (!this.checkCharacterEnemyCollision(targetX, targetY)) {
-                // Телепортируем персонажа
-                this.character.x = targetX;
-                this.character.y = targetY;
-                
-                console.log(`Телепортирован в точку: (${targetX}, ${targetY})`);
-            } else {
-                console.log('Невозможно телепортироваться: враг в целевой позиции');
-            }
+            console.log(`Телепортирован в точку: (${targetX}, ${targetY})`);
         } else {
-            console.log('Невозможно телепортироваться: непроходимый тайл');
+            console.log('Невозможно телепортироваться: враг в целевой позиции');
         }
     }
-    
+
     /**
      * Проверка коллизии персонажа с врагами в заданной позиции
      * @param {number} x - координата X
@@ -541,7 +540,7 @@ class Game {
 
         return false;
     }
-    
+
     /**
      * Создание врага
      */
@@ -554,7 +553,7 @@ class Game {
         const enemy = new Enemy(x, y, type);
         this.enemies.push(enemy);
     }
-    
+
     /**
      * Спаун врагов в загруженных чанках - равномерное распределение
      */
@@ -621,7 +620,7 @@ class Game {
             }
         }
     }
-    
+
     /**
      * Получение случайной позиции в чанке
      */
@@ -629,27 +628,27 @@ class Game {
         const tilesPerChunk = this.chunkSystem.chunkSize;
         const worldStartX = chunkX * tilesPerChunk;
         const worldStartY = chunkY * tilesPerChunk;
-        
+
         // Пытаемся найти проходимую позицию в чанке
         for (let attempts = 0; attempts < 50; attempts++) {
             const localX = Math.floor(Math.random() * tilesPerChunk);
             const localY = Math.floor(Math.random() * tilesPerChunk);
             const tileX = worldStartX + localX;
             const tileY = worldStartY + localY;
-            
+
             if (this.isPassable(tileX, tileY)) {
                 const pos = isoTo2D(tileX, tileY);
                 return [pos.x, pos.y];
             }
         }
-        
+
         // Если не нашли проходимую позицию, возвращаем центр чанка
         const centerTileX = worldStartX + Math.floor(tilesPerChunk / 2);
         const centerTileY = worldStartY + Math.floor(tilesPerChunk / 2);
         const pos = isoTo2D(centerTileX, centerTileY);
         return [pos.x, pos.y];
     }
-    
+
     /**
      * Перемешивание массива (алгоритм Фишера-Йетса)
      */
@@ -659,19 +658,37 @@ class Game {
             [array[i], array[j]] = [array[j], array[i]];
         }
     }
-    
+
     /**
      * Удаление врага
      */
     removeEnemy(enemy) {
         const index = this.enemies.indexOf(enemy);
         if (index !== -1) {
+            // Удаляем спрайт врага из кэша и сцены
+            const enemySprite = this.renderer.entitySprites.get(enemy);
+            if (enemySprite) {
+                if (enemySprite.parent) {
+                    enemySprite.parent.removeChild(enemySprite);
+                }
+                this.renderer.entitySprites.delete(enemy);
+            }
+            
+            // Удаляем полоску здоровья врага
+            const healthBar = this.renderer.entitySprites.get(`${enemy}_healthbar`);
+            if (healthBar) {
+                if (healthBar.parent) {
+                    healthBar.parent.removeChild(healthBar);
+                }
+                this.renderer.entitySprites.delete(`${enemy}_healthbar`);
+            }
+            
             this.enemies.splice(index, 1);
         }
     }
-    
+
     /**
-     * Создание случайного предмета
+     * Создание случайного...
      */
     dropRandomItem(x, y) {
         // Генерируем случайный предмет
@@ -693,28 +710,28 @@ class Game {
         // Определяем количество предметов, которые могут выпасть (до 3)
         const maxDrops = 3;
         const strengthFactor = this.getMonsterStrengthFactor(enemy);
-        
+
         // Базовый шанс выпадения предмета
         let baseDropChance = 0.3;
-        
+
         // Увеличиваем шанс выпадения в зависимости от силы врага
         baseDropChance *= strengthFactor;
-        
+
         // Максимальное количество выпадающих предметов зависит от силы врага
         const maxPossibleDrops = Math.min(maxDrops, Math.ceil(strengthFactor));
-        
+
         // Выбираем количество предметов для выпадения
         const numDrops = Math.min(maxPossibleDrops, Math.max(1, Math.floor(Math.random() * maxPossibleDrops) + 1));
-        
+
         for (let i = 0; i < numDrops; i++) {
             // Проверяем шанс выпадения для каждого предмета
             if (Math.random() < baseDropChance) {
                 // Генерируем предмет с учетом силы врага
                 const item = this.generateItemBasedOnEnemy(enemy);
-                
+
                 // Создаем выпавший предмет на земле
                 this.itemDropSystem.createItemDrop(item, enemy.x, enemy.y);
-                
+
                 console.log(`Выпал предмет: ${item.name} (${item.rarity}) с врага ${enemy.type}`);
             }
         }
@@ -727,13 +744,13 @@ class Game {
      */
     generateItemBasedOnEnemy(enemy) {
         const strengthFactor = this.getMonsterStrengthFactor(enemy);
-        
+
         // Увеличиваем уровень предмета в зависимости от силы врага
         const itemLevel = Math.max(1, Math.floor(this.character.level * strengthFactor));
-        
+
         // Генерируем случайный предмет
         const item = generateRandomItem(itemLevel);
-        
+
         // Улучшаем редкость предмета в зависимости от силы врага
         if (strengthFactor > 1.5 && Math.random() < 0.1) {
             // Повышаем редкость до эпической для очень сильных врагов
@@ -745,10 +762,10 @@ class Game {
             // Повышаем редкость до необычной для средних врагов
             item.rarity = 'uncommon';
         }
-        
+
         // Пересчитываем стоимость предмета с учетом новой редкости
         item.value = item.calculateValue();
-        
+
         return item;
     }
 
@@ -761,15 +778,15 @@ class Game {
         // Базовые характеристики для сравнения
         const baseHealth = GAME_CONFIG.ENEMY.TYPES.BASIC.maxHealth;
         const baseDamage = GAME_CONFIG.ENEMY.TYPES.BASIC.damage;
-        
+
         // Рассчитываем общий показатель силы врага
         const healthFactor = enemy.stats.maxHealth / baseHealth;
         const damageFactor = enemy.damage / baseDamage;
-        
+
         // Взвешиваем факторы (здоровье важнее урона)
         return (healthFactor * 0.6 + damageFactor * 0.4);
     }
-    
+
     /**
      * Проверка, можно ли пройти через тайл
      * @param {number} tileX - координата X тайла
@@ -780,11 +797,31 @@ class Game {
         // Используем chunkSystem для проверки проходимости
         return this.chunkSystem.isPassable(tileX, tileY);
     }
-    
+
+    /**
+     * Получение названия тайла по типу
+     * @param {number} tileType - тип тайла
+     * @returns {string} - название тайла
+     */
+    getTileTypeName(tileType) {
+        const tileNames = {
+            0: 'пол',
+            1: 'стена',
+            2: 'колонна',
+            3: 'дерево',
+            4: 'скала',
+            5: 'вода',
+            6: 'лёд',
+            7: 'декорация'
+        };
+        return tileNames[tileType] || 'неизвестный';
+    }
+
     /**
      * Обновление состояния игры
+     * @param {number} deltaTime - время с последнего обновления в миллисекундах
      */
-    update() {
+    update(deltaTime = 16.67) {
         if (this.gameState !== 'playing') return;
 
         // Обработка движения персонажа с клавиатуры
@@ -849,8 +886,11 @@ class Game {
                 // Добавляем случайные предметы с врага
                 this.dropItemsFromEnemy(enemy);
 
-                // Удаляем мертвого врага
-                this.enemies.splice(i, 1);
+                // Удаляем мертвого врага (используем метод removeEnemy для очистки спрайтов)
+                this.removeEnemy(enemy);
+                // После удаления врага из массива в removeEnemy, продолжаем цикл
+                // i уже указывает на следующий элемент, поэтому не уменьшаем i
+                continue;
             }
         }
 
@@ -861,15 +901,15 @@ class Game {
         this.character.regenerateMana();
 
         // Обновляем эффект получения уровня
-        this.levelUpEffect.update();
+        this.levelUpEffect.update(deltaTime);
 
         // Обновляем боевые эффекты
-        this.combatEffects.update();
+        this.combatEffects.update(deltaTime);
 
         // Обновляем UI каждый кадр для отзывчивости
         this.updateCharacterUI();
     }
-    
+
     /**
      * Обновление UI при изменении характеристик персонажа
      */
@@ -878,18 +918,27 @@ class Game {
         document.getElementById('healthValue').textContent = this.character.health;
         document.getElementById('manaValue').textContent = Math.floor(this.character.mana);
         document.getElementById('levelValue').textContent = this.character.level;
-        
+
+        // Обновляем координаты персонажа
+        document.getElementById('coordX').textContent = Math.floor(this.character.x);
+        document.getElementById('coordY').textContent = Math.floor(this.character.y);
+
+        // Обновляем координаты тайла
+        const tilePos = getTileIndex(this.character.x, this.character.y);
+        document.getElementById('tileX').textContent = tilePos.tileX;
+        document.getElementById('tileY').textContent = tilePos.tileY;
+
         // Обновляем дерево навыков, если оно открыто
         this.skillTree.onCharacterUpdate();
-        
+
         // Обновляем панель навыков
         this.skillBar.update();
-        
+
         // Обновляем окна при необходимости
         this.inventoryWindow.onInventoryUpdate();
         this.statsWindow.onStatsUpdate();
     }
-    
+
     /**
      * Проверка, можно ли пройти через тайл
      * @param {number} tileX - координата X тайла
@@ -907,21 +956,21 @@ class Game {
             const dx = enemy.x - this.character.x;
             const dy = enemy.y - this.character.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
-            
+
             if (distance < (enemy.hitboxRadius + this.character.hitboxRadius) && distance > 0) {
                 // Нормализуем вектор
                 const nx = dx / distance;
                 const ny = dy / distance;
-                
+
                 // Вычисляем, насколько нужно отодвинуть
                 const overlap = (enemy.hitboxRadius + this.character.hitboxRadius) - distance;
-                
+
                 // Сдвигаем врага
                 enemy.x += nx * overlap / 2;
                 enemy.y += ny * overlap / 2;
             }
         }
-        
+
         // Проверяем коллизии с другими врагами
         for (const otherEnemy of this.enemies) {
             if (enemy !== otherEnemy && enemy.checkCollisionWith(otherEnemy)) {
@@ -929,15 +978,15 @@ class Game {
                 const dx = enemy.x - otherEnemy.x;
                 const dy = enemy.y - otherEnemy.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
-                
+
                 if (distance < (enemy.hitboxRadius + otherEnemy.hitboxRadius) && distance > 0) {
                     // Нормализуем вектор
                     const nx = dx / distance;
                     const ny = dy / distance;
-                    
+
                     // Вычисляем, насколько нужно отодвинуть
                     const overlap = (enemy.hitboxRadius + otherEnemy.hitboxRadius) - distance;
-                    
+
                     // Сдвигаем врагов в противоположные стороны
                     const moveAmount = overlap / 2;
                     enemy.x += nx * moveAmount;
@@ -948,7 +997,7 @@ class Game {
             }
         }
     }
-    
+
     /**
      * Получение подходящей стартовой позиции для персонажа
      * @returns {Object} - координаты {x, y}
@@ -957,13 +1006,13 @@ class Game {
         // Для бесконечной генерации начинаем с центра стартового чанка
         const centerX = 0; // Центр координат
         const centerY = 0; // Центр координат
-        
+
         // Проверяем, проходим ли центральный тайл
         if (this.isPassable(centerX, centerY)) {
             const pos = isoTo2D(centerX, centerY);
             return { x: pos.x, y: pos.y };
         }
-        
+
         // Если центральный тайл непроходим, ищем ближайший проходимый
         for (let radius = 1; radius < GAME_CONFIG.POSITION_SEARCH.MAX_RADIUS; radius++) {
             for (let y = -radius; y <= radius; y++) {
@@ -977,12 +1026,12 @@ class Game {
                 }
             }
         }
-        
+
         // Если ничего не найдено, возвращаем центральную точку
         const pos = isoTo2D(centerX, centerY);
         return { x: pos.x, y: pos.y };
     }
-    
+
     /**
      * Получение подходящей позиции для врага
      * @returns {Array} - координаты [x, y]
@@ -1030,7 +1079,7 @@ class Game {
         const y = this.character.y + Math.sin(angle) * distance;
         return [x, y];
     }
-    
+
     /**
      * Обработка зуммирования колесиком мыши
      * @param {WheelEvent} e - событие колеса мыши
@@ -1048,11 +1097,12 @@ class Game {
             Math.min(this.renderer.camera.maxZoom, newZoom)
         );
     }
-    
+
     /**
      * Рендеринг игры
+     * @param {number} deltaTime - время с последнего обновления в миллисекундах
      */
-    render() {
+    render(deltaTime = 16.67) {
         // Очищаем холст
         this.renderer.clear();
 
@@ -1068,33 +1118,37 @@ class Game {
         // Рендерим все объекты с учетом глубины
         this.renderer.renderWithDepth(allRenderables, (obj) => obj.render());
 
-        // Рендерим выпавшие предметы
-        this.itemDropSystem.render(this.renderer, this.hoveredItemDrop);
+        // Рендерим выпавшие предметы через PIXI
+        this.renderer.renderItems(this.itemDropSystem.drops, this.hoveredItemDrop);
 
         // Обновляем миникарту
         this.minimap.update();
 
         // Рендерим эффект получения уровня
-        this.levelUpEffect.render();
+        this.levelUpEffect.render(deltaTime);
 
         // Рендерим боевые эффекты
-        this.combatEffects.render();
+        this.combatEffects.render(deltaTime);
 
         // При необходимости рендерим сетку (для отладки)
         // this.renderer.renderGrid();
     }
-    
+
     /**
      * Основной игровой цикл
      */
-    gameLoop() {
-        this.update();
-        this.render();
-        
+    gameLoop(currentTime = 0) {
+        // Вычисляем deltaTime в миллисекундах
+        const deltaTime = currentTime - (this.lastTime || currentTime);
+        this.lastTime = currentTime;
+
+        this.update(deltaTime);
+        this.render(deltaTime);
+
         // Запрашиваем следующий кадр
-        requestAnimationFrame(() => this.gameLoop());
+        requestAnimationFrame((time) => this.gameLoop(time));
     }
-    
+
     /**
      * Запуск игры
      */

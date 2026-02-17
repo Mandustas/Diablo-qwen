@@ -1,10 +1,11 @@
 /**
  * Система визуальных и звуковых эффектов боя
+ * Адаптирована для работы с PIXIRenderer
  */
 class CombatEffectsSystem {
     constructor(renderer) {
         this.renderer = renderer;
-        this.effects = [];
+        this.effects = []; // Для совместимости со старым Canvas рендерером
         this.audioContext = null;
         this.initAudioContext();
     }
@@ -27,7 +28,11 @@ class CombatEffectsSystem {
      * @param {string} attackerType - Тип атакующего ('player' или 'enemy')
      */
     triggerAttack(x, y, attackerType) {
-        
+        // Проверяем, поддерживает ли рендерер эффекты атаки PIXI
+        if (this.renderer.triggerAttackEffect) {
+            this.renderer.triggerAttackEffect(x, y, attackerType);
+        }
+
         // Воспроизводим звук атаки
         this.playAttackSound(attackerType);
     }
@@ -44,16 +49,21 @@ class CombatEffectsSystem {
         if (isCritical) {
             this.triggerCritical(x, y, damageAmount);
         } else {
-            // Создаем визуальный эффект урона
-            this.createDamageVisualEffect(x, y, damageAmount);
-            
+            // Создаем визуальный эффект урона через PIXI
+            if (this.renderer.triggerDamageEffect) {
+                this.renderer.triggerDamageEffect(x, y, damageAmount);
+            } else {
+                // Fallback для старого Canvas рендерера
+                this.createDamageVisualEffect(x, y, damageAmount);
+            }
+
             // Воспроизводим звук получения урона
             this.playDamageSound();
         }
     }
 
     /**
-     * Создание визуального эффекта урона
+     * Создание визуального эффекта урона (fallback для Canvas)
      */
     createDamageVisualEffect(x, y, damageAmount) {
         // Отображение числа урона
@@ -68,15 +78,15 @@ class CombatEffectsSystem {
             type: 'damage_text',
             scale: 1.0
         };
-        
+
         this.effects.push(damageText);
-        
+
         // Красные частицы урона
         for (let i = 0; i < 8; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = 1 + Math.random() * 2;
             const size = 2 + Math.random() * 3;
-            
+
             this.effects.push({
                 x: x,
                 y: y,
@@ -98,15 +108,20 @@ class CombatEffectsSystem {
      * @param {number} damageAmount - Количество урона
      */
     triggerCritical(x, y, damageAmount) {
-        // Создаем визуальный эффект критического удара
-        this.createCriticalVisualEffect(x, y, damageAmount);
-        
+        // Создаем визуальный эффект критического удара через PIXI
+        if (this.renderer.triggerCriticalEffect) {
+            this.renderer.triggerCriticalEffect(x, y, damageAmount);
+        } else {
+            // Fallback для старого Canvas рендерера
+            this.createCriticalVisualEffect(x, y, damageAmount);
+        }
+
         // Воспроизводим звук критического удара
         this.playCriticalSound();
     }
 
     /**
-     * Создание визуального эффекта критического удара
+     * Создание визуального эффекта критического удара (fallback для Canvas)
      */
     createCriticalVisualEffect(x, y, damageAmount) {
         // Отображение числа критического урона
@@ -121,15 +136,15 @@ class CombatEffectsSystem {
             type: 'critical_text',
             scale: 1.0
         };
-        
+
         this.effects.push(criticalText);
-        
+
         // Особые частицы для крита
         for (let i = 0; i < 15; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = 2 + Math.random() * 3;
             const size = 3 + Math.random() * 4;
-            
+
             this.effects.push({
                 x: x,
                 y: y,
@@ -142,7 +157,7 @@ class CombatEffectsSystem {
                 type: 'critical_particle'
             });
         }
-        
+
         // Вспышка крита
         this.effects.push({
             x: x,
@@ -163,15 +178,20 @@ class CombatEffectsSystem {
      * @param {number} y - Y координата центра эффекта
      */
     triggerDodge(x, y) {
-        // Создаем визуальный эффект уворота
-        this.createDodgeVisualEffect(x, y);
-        
+        // Создаем визуальный эффект уворота через PIXI
+        if (this.renderer.triggerDodgeEffect) {
+            this.renderer.triggerDodgeEffect(x, y);
+        } else {
+            // Fallback для старого Canvas рендерера
+            this.createDodgeVisualEffect(x, y);
+        }
+
         // Воспроизводим звук уворота
         this.playDodgeSound();
     }
 
     /**
-     * Создание визуального эффекта уворота
+     * Создание визуального эффекта уворота (fallback для Canvas)
      */
     createDodgeVisualEffect(x, y) {
         // Отображение текста "MISS"
@@ -186,15 +206,15 @@ class CombatEffectsSystem {
             type: 'miss_text',
             scale: 1.0
         };
-        
+
         this.effects.push(missText);
-        
+
         // Легкие частицы для уворота
         for (let i = 0; i < 5; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = 1 + Math.random() * 1.5;
             const size = 1 + Math.random() * 2;
-            
+
             this.effects.push({
                 x: x,
                 y: y,
@@ -334,8 +354,23 @@ class CombatEffectsSystem {
 
     /**
      * Обновление эффектов
+     * @param {number} deltaTime - время с последнего обновления в миллисекундах
      */
-    update() {
+    update(deltaTime = 16.67) {
+        // Проверяем, поддерживает ли рендерер обновление боевых эффектов PIXI
+        if (this.renderer.updateCombatEffects) {
+            // Используем новый PIXI-метод
+            this.renderer.updateCombatEffects(deltaTime);
+        } else {
+            // Fallback для старого Canvas рендерера
+            this._updateCanvas();
+        }
+    }
+
+    /**
+     * Обновление эффектов для Canvas рендерера (fallback)
+     */
+    _updateCanvas() {
         // Обновляем каждый эффект
         for (let i = this.effects.length - 1; i >= 0; i--) {
             const effect = this.effects[i];
@@ -344,17 +379,17 @@ class CombatEffectsSystem {
             if (effect.type === 'attack_flash' || effect.type === 'critical_flash') {
                 // Увеличиваем размер вспышки
                 effect.size = Math.min(effect.size * effect.growthRate, effect.maxSize);
-                
+
                 // Уменьшаем прозрачность
                 effect.alpha = effect.life / effect.maxLife;
             } else if (effect.type === 'damage_particle' || effect.type === 'critical_particle' || effect.type === 'dodge_particle') {
                 // Обновляем позицию частицы
                 effect.x += effect.vx;
                 effect.y += effect.vy;
-                
+
                 // Добавляем гравитацию
                 effect.vy += 0.1;
-                
+
                 // Уменьшаем скорость из-за трения
                 effect.vx *= 0.98;
                 effect.vy *= 0.98;
@@ -366,7 +401,7 @@ class CombatEffectsSystem {
                 } else {
                     effect.scale = 1.5 - (0.5 * (1 - lifeRatio / 0.7)); // Уменьшение к концу
                 }
-                
+
                 // Поднимаем текст вверх
                 effect.y -= 0.5;
             }
@@ -380,80 +415,24 @@ class CombatEffectsSystem {
 
     /**
      * Отрисовка эффектов
+     * @param {number} deltaTime - время с последнего обновления в миллисекундах
      */
-    render() {
-        if (this.effects.length === 0) {
-            return;
+    render(deltaTime = 16.67) {
+        // Проверяем, поддерживает ли рендерер рендеринг боевых эффектов PIXI
+        if (this.renderer.renderCombatEffects) {
+            // Используем новый PIXI-метод
+            this.renderer.renderCombatEffects();
         }
-
-        // Проверяем, что камера существует
-        if (!this.renderer.camera) {
-            console.warn('Камера не определена для боевых эффектов');
-            return;
-        }
-
-        const ctx = this.renderer.ctx;
-
-        // Сохраняем текущее состояние контекста
-        ctx.save();
-
-        // Центр экрана
-        const centerX = this.renderer.canvas.width / 2;
-        const centerY = this.renderer.canvas.height / 2;
-
-        for (const effect of this.effects) {
-            // Преобразуем мировые координаты в экранные
-            const screenX = centerX + (effect.x - this.renderer.camera.x) * this.renderer.camera.zoom;
-            const screenY = centerY + (effect.y - this.renderer.camera.y) * this.renderer.camera.zoom;
-
-            if (effect.type === 'attack_flash' || effect.type === 'critical_flash') {
-                // Рассчитываем прозрачность в зависимости от оставшегося времени жизни
-                const alpha = effect.life / effect.maxLife;
-                ctx.globalAlpha = alpha;
-
-                // Устанавливаем цвет вспышки
-                ctx.fillStyle = effect.color;
-
-                // Рисуем круг-вспышку
-                ctx.beginPath();
-                ctx.arc(screenX, screenY, effect.size, 0, Math.PI * 2);
-                ctx.fill();
-            } else if (effect.type === 'damage_particle' || effect.type === 'critical_particle' || effect.type === 'dodge_particle') {
-                // Рассчитываем прозрачность в зависимости от оставшегося времени жизни
-                const alpha = effect.life / effect.maxLife;
-                ctx.globalAlpha = alpha;
-
-                // Устанавливаем цвет частицы
-                ctx.fillStyle = effect.color;
-
-                // Рисуем круг-частицу
-                ctx.beginPath();
-                ctx.arc(screenX, screenY, effect.size * alpha, 0, Math.PI * 2);
-                ctx.fill();
-            } else if (effect.type === 'damage_text' || effect.type === 'critical_text' || effect.type === 'miss_text') {
-                // Рассчитываем прозрачность
-                const alpha = effect.life / effect.maxLife;
-                ctx.globalAlpha = alpha;
-
-                // Устанавливаем стиль текста
-                ctx.font = `${effect.fontSize * effect.scale}px 'MedievalSharp', Arial, sans-serif`;
-                ctx.fillStyle = effect.color;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-
-                // Рисуем текст
-                ctx.fillText(effect.text, screenX, screenY);
-            }
-        }
-
-        // Восстанавливаем состояние контекста
-        ctx.restore();
+        // Для старого Canvas рендерера ничего не делаем - он рендерит в update
     }
 
     /**
      * Проверка, есть ли активные эффекты
      */
     hasActiveEffects() {
+        if (this.renderer.hasActiveCombatEffects) {
+            return this.renderer.hasActiveCombatEffects();
+        }
         return this.effects.length > 0;
     }
 }

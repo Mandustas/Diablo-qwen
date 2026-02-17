@@ -1,5 +1,6 @@
 /**
  * Система выпадения предметов на землю
+ * Адаптирована для PIXI рендерера
  */
 
 class ItemDrop {
@@ -21,7 +22,7 @@ class ItemDrop {
         this.fallY = y - 20; // Начальная высота падения
         this.targetY = y; // Конечная позиция
         this.fallProgress = 0; // Прогресс падения (0-1)
-        
+
         // Применяем смещение для предотвращения наложения
         this.applyStackOffset();
     }
@@ -33,7 +34,7 @@ class ItemDrop {
         // Смещаем позицию для отображения в зависимости от номера в стеке
         const offsetDistance = 12; // Расстояние между предметами в стеке
         const angle = (this.stackOffset * 30) * Math.PI / 180; // Угол смещения
-        
+
         this.displayX = this.realX + Math.cos(angle) * offsetDistance * this.stackOffset;
         this.displayY = this.realY + Math.sin(angle) * offsetDistance * this.stackOffset;
     }
@@ -43,15 +44,15 @@ class ItemDrop {
      */
     update() {
         if (this.pickedUp) return;
-        
+
         this.age++;
-        
+
         // Анимация падения
         if (this.fallProgress < 1) {
             this.fallProgress = Math.min(1, this.fallProgress + 0.1);
             this.y = this.fallY + (this.targetY - this.fallY) * this.fallProgress;
         }
-        
+
         // Проверяем, не истекло ли время жизни
         if (this.age >= this.lifetime) {
             this.pickedUp = true; // Удаляем как "собранный" чтобы не рендерить
@@ -86,55 +87,6 @@ class ItemDrop {
         }
 
         return false;
-    }
-
-    /**
-     * Рендеринг предмета
-     */
-    render(renderer, isHovered = false) {
-        if (this.pickedUp) return;
-
-        const centerX = renderer.canvas.width / 2;
-        const centerY = renderer.canvas.height / 2;
-
-        // Преобразуем координаты предмета в экранные с учетом камеры и зума
-        // Используем отображаемые координаты для рендеринга, но реальные для проверки коллизий
-        const screenX = centerX + (this.displayX - renderer.camera.x) * renderer.camera.zoom;
-        const screenY = centerY + (this.displayY - renderer.camera.y) * renderer.camera.zoom;
-
-        // Размеры с учетом зума
-        const scaledWidth = this.width * renderer.camera.zoom;
-        const scaledHeight = this.height * renderer.camera.zoom;
-
-        // Рисуем рамку предмета в зависимости от редкости
-        renderer.ctx.strokeStyle = this.item.getColorByRarity(); // Белая рамка при наведении
-        renderer.ctx.lineWidth = (2) * renderer.camera.zoom; 
-        renderer.ctx.strokeRect(
-            screenX - scaledWidth / 2,
-            screenY - scaledHeight / 2,
-            scaledWidth,
-            scaledHeight
-        );
-
-        // Заливка фона рамки
-        renderer.ctx.fillStyle = isHovered ? "rgba(255, 255, 255, 0.4)" :'rgba(255, 255, 255, 0.2)'; // Более светлая заливка при наведении
-        renderer.ctx.fillRect(
-            screenX - scaledWidth / 2,
-            screenY - scaledHeight / 2,
-            scaledWidth,
-            scaledHeight
-        );
-
-        // Рисуем название предмета
-        renderer.ctx.font = `${10 * renderer.camera.zoom}px Arial`;
-        renderer.ctx.textAlign = 'center';
-        renderer.ctx.textBaseline = 'middle';
-        renderer.ctx.fillStyle = this.item.getColorByRarity(); // Желтый текст при наведении
-        renderer.ctx.fillText(
-            this.item.name,
-            screenX,
-            screenY
-        );
     }
 }
 
@@ -203,37 +155,27 @@ class ItemDropSystem {
     recalculateStackOffsets() {
         // Группируем предметы по позициям
         const positionGroups = new Map();
-        
+
         for (const drop of this.drops) {
             // Используем округленные координаты как ключ
             const key = `${Math.round(drop.realX / 10)}_${Math.round(drop.realY / 10)}`;
-            
+
             if (!positionGroups.has(key)) {
                 positionGroups.set(key, []);
             }
             positionGroups.get(key).push(drop);
         }
-        
+
         // Для каждой группы переназначаем смещения
         for (const group of positionGroups.values()) {
             group.sort((a, b) => a.stackOffset - b.stackOffset); // Сортируем по текущему смещению
-            
+
             for (let i = 0; i < group.length; i++) {
                 if (group[i].stackOffset !== i) {
                     group[i].stackOffset = i;
                     group[i].applyStackOffset();
                 }
             }
-        }
-    }
-
-    /**
-     * Рендеринг всех выпавших предметов
-     */
-    render(renderer, hoveredDrop = null) {
-        for (const drop of this.drops) {
-            const isHovered = hoveredDrop && drop === hoveredDrop;
-            drop.render(renderer, isHovered);
         }
     }
 
@@ -301,44 +243,39 @@ class ItemDropSystem {
 
         return dropsInRange;
     }
-    
-    /**
-     * Проверка, находится ли точка над предметом
-     */
-    isPointOverDrop(x, y, drop) {
-        if (drop.pickedUp) return false;
 
-        const centerX = this.renderer.canvas.width / 2;
-        const centerY = this.renderer.canvas.height / 2;
-
-        // Преобразуем координаты предмета в экранные с учетом камеры и зума
-        const screenX = centerX + (drop.displayX - this.renderer.camera.x) * this.renderer.camera.zoom;
-        const screenY = centerY + (drop.displayY - this.renderer.camera.y) * this.renderer.camera.zoom;
-
-        // Размеры с учетом зума
-        const scaledWidth = drop.width * this.renderer.camera.zoom;
-        const scaledHeight = drop.height * this.renderer.camera.zoom;
-
-        // Проверяем, находится ли точка внутри прямоугольника предмета
-        return (
-            x >= screenX - scaledWidth / 2 &&
-            x <= screenX + scaledWidth / 2 &&
-            y >= screenY - scaledHeight / 2 &&
-            y <= screenY + scaledHeight / 2
-        );
-    }
-    
     /**
      * Получение предмета под курсором
+     * @param {number} mouseX - Координата X курсора (экранная)
+     * @param {number} mouseY - Координата Y курсора (экранная)
+     * @param {Object} renderer - PIXI renderer с камерой
+     * @returns {ItemDrop|null} - предмет под курсором или null
      */
     getDropAtPoint(mouseX, mouseY, renderer) {
-        // Сохраняем рендер для использования в isPointOverDrop
-        this.renderer = renderer;
-        
+        const centerX = renderer.app.screen.width / 2;
+        const centerY = renderer.app.screen.height / 2;
+        const zoom = renderer.camera.zoom;
+
         // Проходим по предметам в обратном порядке, чтобы верхние элементы имели приоритет
         for (let i = this.drops.length - 1; i >= 0; i--) {
             const drop = this.drops[i];
-            if (this.isPointOverDrop(mouseX, mouseY, drop)) {
+            if (drop.pickedUp) continue;
+
+            // Преобразуем мировые координаты в экранные
+            const screenX = centerX + (drop.displayX - renderer.camera.x) * zoom;
+            const screenY = centerY + (drop.displayY - renderer.camera.y) * zoom;
+
+            // Размеры с учетом зума
+            const scaledWidth = drop.width * zoom;
+            const scaledHeight = drop.height * zoom;
+
+            // Проверяем, находится ли точка внутри прямоугольника предмета
+            if (
+                mouseX >= screenX - scaledWidth / 2 &&
+                mouseX <= screenX + scaledWidth / 2 &&
+                mouseY >= screenY - scaledHeight / 2 &&
+                mouseY <= screenY + scaledHeight / 2
+            ) {
                 return drop;
             }
         }

@@ -1,74 +1,83 @@
 /**
  * Система визуальных эффектов получения нового уровня
+ * Адаптирована для работы с PIXIRenderer
  */
 class LevelUpEffect {
     constructor(renderer) {
         this.renderer = renderer;
-        this.effects = [];
         this.isActive = false;
+        this.effects = []; // Для совместимости со старым Canvas рендерером
     }
 
     /**
      * Запуск эффекта получения уровня
-     * @param {number} x - X координата центра эффекта
-     * @param {number} y - Y координата центра эффекта
+     * @param {number} x - X координата центра эффекта в мировых координатах
+     * @param {number} y - Y координата центра эффекта в мировых координатах
      * @param {number} level - новый уровень
      */
     triggerLevelUp(x, y, level) {
         this.isActive = true;
-        
+
+        // Проверяем, поддерживает ли рендерер эффекты уровня PIXI
+        if (this.renderer.triggerLevelUpEffect) {
+            // Используем новый PIXI-метод
+            this.renderer.triggerLevelUpEffect(x, y, level);
+        } else {
+            // Fallback для старого Canvas рендерера
+            this._triggerLevelUpCanvas(x, y, level);
+        }
+
+        // Воспроизводим звук получения уровня (если доступен)
+        this.playLevelUpSound();
+    }
+
+    /**
+     * Запуск эффекта получения уровня для Canvas рендерера (fallback)
+     * @param {number} x - X координата центра эффекта
+     * @param {number} y - Y координата центра эффекта
+     * @param {number} level - новый уровень
+     */
+    _triggerLevelUpCanvas(x, y, level) {
         // Создаем частицы для эффекта
         for (let i = 0; i < 50; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = 2 + Math.random() * 3;
             const size = 2 + Math.random() * 4;
-            const lifetime = 60 + Math.random() * 60; // 1-2 секунды при 60fps
-            
+            const lifetime = 1000 + Math.random() * 1000; // 1-2 секунды
+
             // Разные цвета для эффекта (золотой, белый, желтый)
             const colors = ['#FFD700', '#FFFFFF', '#FFFF00', '#FFA500', '#FFFF99'];
             const color = colors[Math.floor(Math.random() * colors.length)];
-            
-            this.effects.push({
-                x: x,
-                y: y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                size: size,
-                color: color,
-                life: lifetime,
-                maxLife: lifetime,
-                type: 'particle'
-            });
+
+            this.renderer.createLevelUpParticle(
+                x, y,
+                color,
+                size,
+                Math.cos(angle) * speed,
+                Math.sin(angle) * speed,
+                lifetime
+            );
         }
-        
+
         // Добавляем текст "LEVEL UP!" в центр эффекта
-        this.effects.push({
-            x: x,
-            y: y - 30,
-            text: 'LEVEL UP!',
-            fontSize: 24,
-            color: '#FFD700',
-            life: 120, // 2 секунды при 60fps
-            maxLife: 120,
-            type: 'text',
-            scale: 1.0
-        });
-        
+        this.renderer.createLevelUpText(
+            x, y - 30,
+            'LEVEL UP!',
+            24,
+            '#FFD700',
+            2000, // 2 секунды
+            -30
+        );
+
         // Добавляем числовое обозначение уровня
-        this.effects.push({
-            x: x,
-            y: y + 10,
-            text: `${level}`,
-            fontSize: 32,
-            color: '#FFFFFF',
-            life: 100, // 1.6 секунды при 60fps
-            maxLife: 100,
-            type: 'text',
-            scale: 1.0
-        });
-        
-        // Воспроизводим звук получения уровня (если доступен)
-        this.playLevelUpSound();
+        this.renderer.createLevelUpText(
+            x, y + 10,
+            `${level}`,
+            32,
+            '#FFFFFF',
+            1600, // 1.6 секунды
+            10
+        );
     }
 
     /**
@@ -78,25 +87,25 @@ class LevelUpEffect {
         // Создаем простой звуковой эффект с помощью Web Audio API
         try {
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            
+
             // Создаем гармоничную мелодию для получения уровня
             const oscillator = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
-            
+
             oscillator.connect(gainNode);
             gainNode.connect(audioCtx.destination);
-            
+
             // Устанавливаем параметры осциллятора для приятного звука
             oscillator.type = 'sine';
             oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
             oscillator.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1); // E5
             oscillator.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.2); // G5
             oscillator.frequency.setValueAtTime(1046.50, audioCtx.currentTime + 0.3); // C6
-            
+
             // Регулируем громкость
             gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
             gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-            
+
             // Запускаем и останавливаем осциллятор
             oscillator.start();
             oscillator.stop(audioCtx.currentTime + 0.5);
@@ -107,8 +116,27 @@ class LevelUpEffect {
 
     /**
      * Обновление эффектов
+     * @param {number} deltaTime - время с последнего обновления в миллисекундах
      */
-    update() {
+    update(deltaTime = 16.67) { // 16.67ms = 60fps
+        // Проверяем, поддерживает ли рендерер обновление эффектов уровня PIXI
+        if (this.renderer.updateLevelUpEffects) {
+            // Используем новый PIXI-метод
+            this.renderer.updateLevelUpEffects(deltaTime);
+            
+            // Проверяем активность эффектов через рендерер
+            this.isActive = this.renderer.hasActiveLevelUpEffects();
+        } else {
+            // Fallback для старого Canvas рендерера
+            this._updateCanvas();
+        }
+    }
+
+    /**
+     * Обновление эффектов для Canvas рендерера (fallback)
+     */
+    _updateCanvas() {
+        // Старая логика обновления для совместимости
         if (!this.isActive || this.effects.length === 0) {
             this.isActive = false;
             return;
@@ -123,10 +151,10 @@ class LevelUpEffect {
                 // Обновляем позицию частицы
                 effect.x += effect.vx;
                 effect.y += effect.vy;
-                
+
                 // Добавляем гравитацию
                 effect.vy += 0.1;
-                
+
                 // Уменьшаем скорость из-за трения
                 effect.vx *= 0.98;
                 effect.vy *= 0.98;
@@ -138,7 +166,7 @@ class LevelUpEffect {
                 } else {
                     effect.scale = 1.5 - (0.5 * (1 - lifeRatio / 0.7)); // Уменьшение к концу
                 }
-                
+
                 // Поднимаем текст вверх
                 effect.y -= 0.5;
             }
@@ -157,62 +185,24 @@ class LevelUpEffect {
 
     /**
      * Отрисовка эффектов
+     * @param {number} deltaTime - время с последнего обновления в миллисекундах
      */
-    render() {
-        if (!this.isActive || this.effects.length === 0) {
-            return;
+    render(deltaTime = 16.67) {
+        // Проверяем, поддерживает ли рендерер рендеринг эффектов уровня PIXI
+        if (this.renderer.renderLevelUpEffects) {
+            // Используем новый PIXI-метод
+            this.renderer.renderLevelUpEffects();
         }
-
-        const ctx = this.renderer.ctx;
-        
-        // Сохраняем текущее состояние контекста
-        ctx.save();
-
-        // Центр экрана
-        const centerX = this.renderer.canvas.width / 2;
-        const centerY = this.renderer.canvas.height / 2;
-
-        for (const effect of this.effects) {
-            // Преобразуем мировые координаты в экранные
-            const screenX = centerX + (effect.x - this.renderer.camera.x) * this.renderer.camera.zoom;
-            const screenY = centerY + (effect.y - this.renderer.camera.y) * this.renderer.camera.zoom;
-
-            if (effect.type === 'particle') {
-                // Рассчитываем прозрачность в зависимости от оставшегося времени жизни
-                const alpha = effect.life / effect.maxLife;
-                ctx.globalAlpha = alpha;
-                
-                // Устанавливаем цвет частицы
-                ctx.fillStyle = effect.color;
-                
-                // Рисуем круг-частицу
-                ctx.beginPath();
-                ctx.arc(screenX, screenY, effect.size * alpha, 0, Math.PI * 2);
-                ctx.fill();
-            } else if (effect.type === 'text') {
-                // Рассчитываем прозрачность
-                const alpha = effect.life / effect.maxLife;
-                ctx.globalAlpha = alpha;
-                
-                // Устанавливаем стиль текста
-                ctx.font = `${effect.fontSize * effect.scale}px 'MedievalSharp', Arial, sans-serif`;
-                ctx.fillStyle = effect.color;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                
-                // Рисуем текст
-                ctx.fillText(effect.text, screenX, screenY);
-            }
-        }
-
-        // Восстанавливаем состояние контекста
-        ctx.restore();
+        // Для старого Canvas рендерера ничего не делаем - он рендерит в update
     }
 
     /**
      * Проверка, активен ли эффект
      */
     getActiveStatus() {
+        if (this.renderer.hasActiveLevelUpEffects) {
+            return this.renderer.hasActiveLevelUpEffects();
+        }
         return this.isActive;
     }
 }
