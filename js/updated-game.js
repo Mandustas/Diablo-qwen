@@ -819,8 +819,9 @@ class Game {
 
     /**
      * Обновление состояния игры
+     * @param {number} deltaTime - время с последнего обновления в миллисекундах
      */
-    update() {
+    update(deltaTime = 16.67) {
         if (this.gameState !== 'playing') return;
 
         // Обработка движения персонажа с клавиатуры
@@ -900,7 +901,7 @@ class Game {
         this.character.regenerateMana();
 
         // Обновляем эффект получения уровня
-        this.levelUpEffect.update();
+        this.levelUpEffect.update(deltaTime);
 
         // Обновляем боевые эффекты
         this.combatEffects.update();
@@ -1099,8 +1100,9 @@ class Game {
 
     /**
      * Рендеринг игры
+     * @param {number} deltaTime - время с последнего обновления в миллисекундах
      */
-    render() {
+    render(deltaTime = 16.67) {
         // Очищаем холст
         this.renderer.clear();
 
@@ -1123,7 +1125,7 @@ class Game {
         this.minimap.update();
 
         // Рендерим эффект получения уровня
-        this.levelUpEffect.render();
+        this.levelUpEffect.render(deltaTime);
 
         // Рендерим боевые эффекты
         this.combatEffects.render();
@@ -1135,12 +1137,16 @@ class Game {
     /**
      * Основной игровой цикл
      */
-    gameLoop() {
-        this.update();
-        this.render();
+    gameLoop(currentTime = 0) {
+        // Вычисляем deltaTime в миллисекундах
+        const deltaTime = currentTime - (this.lastTime || currentTime);
+        this.lastTime = currentTime;
+
+        this.update(deltaTime);
+        this.render(deltaTime);
 
         // Запрашиваем следующий кадр
-        requestAnimationFrame(() => this.gameLoop());
+        requestAnimationFrame((time) => this.gameLoop(time));
     }
 
     /**

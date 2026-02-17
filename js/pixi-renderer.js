@@ -125,16 +125,6 @@ class PIXIRenderer {
         // Для culling (отсечение невидимых объектов)
         this.viewBounds = new PIXI.Rectangle(0, 0, this.app.screen.width, this.app.screen.height);
 
-        // Слой для частиц
-        this.particleLayer = new PIXI.ParticleContainer(10000, {
-            scale: true,
-            position: true,
-            rotation: true,
-            uvs: true,
-            alpha: true
-        });
-        this.mainContainer.addChild(this.particleLayer);
-
         // Система частиц
         this.particles = [];
 
@@ -148,6 +138,17 @@ class PIXIRenderer {
 
         // Кэш текстур для предметов
         this.itemTextures = new Map();
+
+        // Пул для спрайтов частиц
+        this.particleSpritePool = []; // Пул для переиспользования спрайтов частиц
+        this.activeParticles = new Map(); // Активные частицы (ключ — объект частицы)
+
+        // Пул для текстовых эффектов (LEVEL UP, цифры урона и т.д.)
+        this.textSpritePool = []; // Пул для текстовых спрайтов
+        this.activeTexts = new Map(); // Активные текстовые эффекты
+
+        // Эффекты получения уровня
+        this.levelUpEffects = []; // Массив эффектов уровня (частицы + текст)
     }
 
     /**
@@ -2269,6 +2270,328 @@ class PIXIRenderer {
                 this.particles.splice(i, 1);
             }
         }
+    }
+
+    /**
+     * Создание частицы для эффекта получения уровня
+     * @param {number} x - X координата в мировых координатах
+     * @param {number} y - Y координата в мировых координатах
+     * @param {string} color - HEX цвет частицы
+     * @param {number} size - размер частицы
+     * @param {number} vx - скорость по X
+     * @param {number} vy - скорость по Y
+     * @param {number} lifetime - время жизни в миллисекундах
+     */
+    createLevelUpParticle(x, y, color, size, vx, vy, lifetime) {
+        const particle = {
+            x,
+            y,
+            startX: x,
+            startY: y,
+            color: this.hexToDecimal(color),
+            size,
+            velocityX: vx,
+            velocityY: vy,
+            lifetime,
+            age: 0,
+            alpha: 1,
+            type: 'levelUp'
+        };
+
+        this.levelUpEffects.push(particle);
+        return particle;
+    }
+
+    /**
+     * Создание текстового эффекта для получения уровня
+     * @param {number} x - X координата в мировых координатах
+     * @param {number} y - Y координата в мировых координатах
+     * @param {string} text - текст для отображения
+     * @param {number} fontSize - размер шрифта
+     * @param {string} color - HEX цвет текста
+     * @param {number} lifetime - время жизни в миллисекундах
+     * @param {number} offsetY - смещение по Y для анимации
+     */
+    createLevelUpText(x, y, text, fontSize, color, lifetime, offsetY = 0) {
+        const textEffect = {
+            x,
+            y,
+            startY: y,
+            text,
+            fontSize,
+            color: this.hexToDecimal(color),
+            lifetime,
+            age: 0,
+            alpha: 1,
+            scale: 1.0,
+            offsetY,
+            type: 'text'
+        };
+
+        this.levelUpEffects.push(textEffect);
+        return textEffect;
+    }
+
+    /**
+     * Запуск эффекта получения уровня
+     * @param {number} x - X координата центра эффекта в мировых координатах
+     * @param {number} y - Y координата центра эффекта в мировых координатах
+     * @param {number} level - новый уровень
+     */
+    triggerLevelUpEffect(x, y, level) {
+        // Создаем частицы для эффекта
+        for (let i = 0; i < 50; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 2 + Math.random() * 3;
+            const size = 2 + Math.random() * 4;
+            const lifetime = 1000 + Math.random() * 1000; // 1-2 секунды
+
+            // Разные цвета для эффекта (золотой, белый, желтый)
+            const colors = ['#FFD700', '#FFFFFF', '#FFFF00', '#FFA500', '#FFFF99'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+
+            this.createLevelUpParticle(
+                x, y,
+                color,
+                size,
+                Math.cos(angle) * speed,
+                Math.sin(angle) * speed,
+                lifetime
+            );
+        }
+
+        // Добавляем текст "LEVEL UP!" в центр эффекта
+        this.createLevelUpText(
+            x, y - 30,
+            'LEVEL UP!',
+            24,
+            '#FFD700',
+            2000, // 2 секунды
+            -30
+        );
+
+        // Добавляем числовое обозначение уровня
+        this.createLevelUpText(
+            x, y + 10,
+            `${level}`,
+            32,
+            '#FFFFFF',
+            1600, // 1.6 секунды
+            10
+        );
+    }
+
+    /**
+     * Обновление эффектов получения уровня
+     * @param {number} deltaTime - время с последнего обновления в миллисекундах
+     */
+    updateLevelUpEffects(deltaTime) {
+        for (let i = this.levelUpEffects.length - 1; i >= 0; i--) {
+            const effect = this.levelUpEffects[i];
+            effect.age += deltaTime;
+
+            if (effect.type === 'levelUp') {
+                // Обновляем позицию частицы
+                effect.x += effect.velocityX;
+                effect.y += effect.velocityY;
+
+                // Добавляем гравитацию
+                effect.velocityY += 0.1;
+
+                // Уменьшаем скорость из-за трения
+                effect.velocityX *= 0.98;
+                effect.velocityY *= 0.98;
+
+                // Обновляем прозрачность
+                effect.alpha = 1 - (effect.age / effect.lifetime);
+            } else if (effect.type === 'text') {
+                // Для текста увеличиваем масштаб в начале и уменьшаем к концу
+                const lifeRatio = 1 - (effect.age / effect.lifetime);
+                if (lifeRatio > 0.7) {
+                    effect.scale = 1 + (0.5 * (1 - (lifeRatio - 0.7) / 0.3)); // Увеличение в начале
+                } else {
+                    effect.scale = 1.5 - (0.5 * (1 - lifeRatio / 0.7)); // Уменьшение к концу
+                }
+
+                // Поднимаем текст вверх
+                effect.y -= 0.5;
+
+                // Обновляем прозрачность
+                effect.alpha = lifeRatio;
+            }
+
+            // Удаляем эффект, если время жизни истекло
+            if (effect.age >= effect.lifetime) {
+                this.levelUpEffects.splice(i, 1);
+            }
+        }
+    }
+
+    /**
+     * Отрисовка эффектов получения уровня на PIXI слоях
+     */
+    renderLevelUpEffects() {
+        if (this.levelUpEffects.length === 0) {
+            return;
+        }
+
+        // Сначала очищаем старые спрайты эффектов из слоев
+        this._cleanupLevelUpSprites();
+
+        // Рендерим частицы
+        for (const effect of this.levelUpEffects) {
+            if (effect.type === 'levelUp') {
+                // Используем мировые координаты напрямую
+                // mainContainer уже имеет смещение камеры и масштабирование
+                const worldX = effect.x;
+                const worldY = effect.y;
+
+                // Получаем или создаем спрайт для частицы
+                let sprite = this._getParticleSpriteFromPool();
+
+                // Настраиваем спрайт
+                sprite.x = worldX;
+                sprite.y = worldY;
+                sprite.scale.set(effect.size * effect.alpha);
+                sprite.alpha = effect.alpha;
+                sprite.tint = effect.color;
+                sprite.visible = true;
+
+                // Добавляем в particleLayer если еще не добавлен
+                if (!sprite.parent) {
+                    this.particleLayer.addChild(sprite);
+                }
+            }
+        }
+
+        // Рендерим текст (отдельно, после частиц)
+        for (const effect of this.levelUpEffects) {
+            if (effect.type === 'text') {
+                // Используем мировые координаты напрямую
+                const worldX = effect.x;
+                const worldY = effect.y;
+
+                // Получаем или создаем текстовый спрайт
+                let textSprite = this._getTextSpriteFromPool();
+
+                // Обновляем текст
+                if (!textSprite.textObj) {
+                    textSprite.textObj = new PIXI.Text(effect.text, {
+                        fontSize: effect.fontSize,
+                        fontFamily: "'MedievalSharp', Arial, sans-serif",
+                        fill: effect.color,
+                        fontWeight: 'bold'
+                    });
+                    textSprite.addChild(textSprite.textObj);
+                } else {
+                    textSprite.textObj.text = effect.text;
+                    textSprite.textObj.style.fontSize = effect.fontSize;
+                    textSprite.textObj.style.fill = effect.color;
+                    textSprite.textObj.updateText();
+                }
+
+                // Позиционируем и масштабируем
+                textSprite.x = worldX;
+                textSprite.y = worldY;
+                textSprite.scale.set(effect.scale);
+                textSprite.alpha = effect.alpha;
+                textSprite.visible = true;
+
+                // Центрируем текст
+                if (textSprite.textObj) {
+                    textSprite.textObj.anchor.set(0.5);
+                }
+
+                // Добавляем в uiLayer если еще не добавлен
+                if (!textSprite.parent) {
+                    this.uiLayer.addChild(textSprite);
+                }
+            }
+        }
+    }
+
+    /**
+     * Очистка старых спрайтов эффектов перед новым кадром
+     */
+    _cleanupLevelUpSprites() {
+        // Очищаем все спрайты частиц из particleLayer
+        this.particleLayer.removeChildren();
+        
+        // Очищаем только текстовые спрайты из uiLayer (не трогаем другие UI элементы)
+        for (let i = this.uiLayer.children.length - 1; i >= 0; i--) {
+            const child = this.uiLayer.children[i];
+            if (child.textObj) {
+                this.uiLayer.removeChild(child);
+                this.textSpritePool.push(child);
+            }
+        }
+    }
+
+    /**
+     * Получение спрайта частицы из пула
+     * @returns {PIXI.Sprite} - спрайт частицы
+     */
+    _getParticleSpriteFromPool() {
+        if (this.particleSpritePool.length > 0) {
+            const sprite = this.particleSpritePool.pop();
+            sprite.visible = true;
+            return sprite;
+        }
+        
+        // Создаем новый спрайт частицы (простой квадрат)
+        const graphics = new PIXI.Graphics();
+        graphics.beginFill(0xFFFFFF);
+        graphics.drawCircle(0, 0, 1); // Единичный круг, масштабирование будет через sprite.scale
+        graphics.endFill();
+        
+        const texture = this.app.renderer.generateTexture(graphics);
+        graphics.destroy();
+        
+        return new PIXI.Sprite(texture);
+    }
+
+    /**
+     * Получение текстового спрайта из пула
+     * @returns {PIXI.Container} - контейнер для текста
+     */
+    _getTextSpriteFromPool() {
+        if (this.textSpritePool.length > 0) {
+            const container = this.textSpritePool.pop();
+            container.visible = true;
+            return container;
+        }
+        
+        // Создаем новый контейнер для текста
+        const container = new PIXI.Container();
+        return container;
+    }
+
+    /**
+     * Очистка пулов спрайтов эффектов
+     */
+    clearLevelUpEffects() {
+        // Возвращаем все спрайты частиц в пул
+        for (const child of this.particleLayer.children) {
+            this.particleSpritePool.push(child);
+        }
+        
+        // Возвращаем все текстовые спрайты в пул
+        for (const child of this.uiLayer.children) {
+            if (child.textObj) {
+                this.textSpritePool.push(child);
+            }
+        }
+        
+        // Очищаем массив эффектов
+        this.levelUpEffects = [];
+    }
+
+    /**
+     * Проверка, активны ли эффекты получения уровня
+     * @returns {boolean} - true если эффекты активны
+     */
+    hasActiveLevelUpEffects() {
+        return this.levelUpEffects.length > 0;
     }
 
     /**
