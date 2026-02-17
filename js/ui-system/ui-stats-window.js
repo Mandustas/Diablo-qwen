@@ -390,6 +390,9 @@ class UIStatsWindow extends UIComponent {
         // Создаем заголовок
         this.renderContent();
 
+        // Создаем кнопку закрытия
+        this.createCloseButton();
+
         // Первоначальная отрисовка
         this.renderStats();
     }
