@@ -669,32 +669,70 @@ class PIXIRenderer {
     createFloorTexture(tileSize) {
         try {
             const graphics = new PIXI.Graphics();
+            const ts = tileSize;
 
-            // Основной пол
+            // Основной пол - тёмный камень
             graphics.beginFill(this.hexToDecimal(this.colors.floor));
-            this.drawIsometricTile(graphics, 0, 0, tileSize, tileSize / 2);
+            this.drawIsometricTile(graphics, 0, 0, ts, ts / 2);
             graphics.endFill();
 
-            // Добавляем текстуру пола
-            graphics.beginFill(this.hexToDecimal(this.colors.floorLight));
-
-            // Рисуем узор на полу (квадрат в центре)
-            graphics.drawRect(-tileSize / 8, -tileSize / 16, tileSize / 4, tileSize / 8);
+            // Добавляем градиент затемнения к краям
+            graphics.beginFill(0x0a0806, 0.4);
+            this.drawIsometricTile(graphics, 0, 0, ts * 0.9, ts / 2 * 0.9);
             graphics.endFill();
 
-            // Обводка для контраста
-            graphics.lineStyle(1, this.hexToDecimal(this.colors.grid));
+            // Текстура каменных плит с трещинами
+            const stoneColors = [0x2a2218, 0x3d2f22, 0x1a1512, 0x4a3a2a];
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI;
+                const dist = ts * 0.15 * Math.random();
+                const px = Math.cos(angle) * dist;
+                const py = Math.sin(angle) * dist * 0.5;
+                const color = stoneColors[Math.floor(Math.random() * stoneColors.length)];
+                graphics.beginFill(color, 0.3 + Math.random() * 0.3);
+                graphics.drawCircle(px, py + ts * 0.1, ts * 0.03 + Math.random() * ts * 0.02);
+                graphics.endFill();
+            }
+
+            // Трещины на камне
+            graphics.lineStyle(1 + Math.random(), this.hexToDecimal(this.colors.grid), 0.4);
+            for (let c = 0; c < 3; c++) {
+                const startX = (Math.random() - 0.5) * ts * 0.4;
+                const startY = (Math.random() - 0.5) * ts * 0.2 + ts * 0.1;
+                graphics.moveTo(startX, startY);
+                let cx = startX;
+                let cy = startY;
+                for (let seg = 0; seg < 4; seg++) {
+                    cx += (Math.random() - 0.5) * ts * 0.15;
+                    cy += ts * 0.05 + Math.random() * ts * 0.05;
+                    if (cy < ts * 0.35) {
+                        graphics.lineTo(cx, cy);
+                    }
+                }
+            }
+
+            // Контур плит по краям
+            graphics.lineStyle(2, this.hexToDecimal(this.colors.grid), 0.6);
             graphics.moveTo(0, 0);
-            graphics.lineTo(tileSize / 2, tileSize / 4);
-            graphics.lineTo(0, tileSize / 2);
-            graphics.lineTo(-tileSize / 2, tileSize / 4);
+            graphics.lineTo(ts / 2, ts / 4);
+            graphics.lineTo(0, ts / 2);
+            graphics.lineTo(-ts / 2, ts / 4);
             graphics.closePath();
 
-            // Создаем текстуру из графики
-            const texture = this.app.renderer.generateTexture(graphics);
-            graphics.destroy(); // Очищаем память
+            // Добавляем неровности по краям
+            graphics.lineStyle(1, 0x1a1512, 0.3);
+            for (let e = 0; e < 12; e++) {
+                const edgeAngle = (e / 12) * Math.PI * 2;
+                const edgeX = Math.cos(edgeAngle) * ts * 0.35;
+                const edgeY = Math.sin(edgeAngle) * ts * 0.175;
+                graphics.beginFill(0x0a0806, 0.2);
+                graphics.drawCircle(edgeX, edgeY, ts * 0.02);
+                graphics.endFill();
+            }
 
-            // Проверяем, что текстура имеет размеры
+            const texture = this.app.renderer.generateTexture(graphics);
+            graphics.destroy();
+
             if (texture && texture.width > 0 && texture.height > 0) {
                 return texture;
             }
@@ -702,7 +740,6 @@ class PIXIRenderer {
             console.error('Ошибка при создании текстуры пола:', e);
         }
 
-        // Резервная текстура через PIXI.Graphics
         return this.createFallbackTexture(tileSize, this.hexToDecimal(this.colors.floor));
     }
 
@@ -714,34 +751,70 @@ class PIXIRenderer {
     createWallTexture(tileSize) {
         try {
             const graphics = new PIXI.Graphics();
+            const ts = tileSize;
 
-            // Основная стена
+            // Основная стена - тёмный грубый камень
             graphics.beginFill(this.hexToDecimal(this.colors.wall));
-            this.drawIsometricTile(graphics, 0, 0, tileSize, tileSize / 2);
+            this.drawIsometricTile(graphics, 0, 0, ts, ts / 2);
             graphics.endFill();
 
-            // Добавляем детали стены (кирпичная кладка)
-            graphics.beginFill(this.hexToDecimal(this.colors.wallDark));
-            const brickWidth = tileSize / 4;
-            const brickHeight = tileSize / 8;
+            // Затемнение по краям для объёма
+            graphics.beginFill(0x0a0806, 0.5);
+            this.drawIsometricTile(graphics, 0, 0, ts * 0.85, ts / 2 * 0.85);
+            graphics.endFill();
 
-            for (let row = 0; row < 2; row++) {
-                for (let col = 0; col < 2; col++) {
-                    if ((row + col) % 2 === 0) {
-                        const brickX = (col * brickWidth) - (row * brickWidth / 2) - brickWidth / 2;
-                        const brickY = (row * brickHeight) - brickHeight / 2;
-                        graphics.drawRect(brickX, brickY, brickWidth, brickHeight);
-                    }
+            // Текстура грубого камня с неровностями
+            const stoneColors = [0x2d2520, 0x3d3028, 0x1a1512, 0x4a3a30, 0x2a2218];
+            for (let row = 0; row < 4; row++) {
+                for (let col = 0; col < 4; col++) {
+                    const brickW = ts * (0.15 + Math.random() * 0.1);
+                    const brickH = ts * (0.08 + Math.random() * 0.04);
+                    const brickX = (col - 1.5) * ts * 0.25 + (Math.random() - 0.5) * ts * 0.1;
+                    const brickY = (row - 1.5) * ts * 0.12 + (Math.random() - 0.5) * ts * 0.05;
+                    const color = stoneColors[Math.floor(Math.random() * stoneColors.length)];
+                    
+                    graphics.beginFill(color, 0.6 + Math.random() * 0.3);
+                    // Неровные края камней
+                    graphics.moveTo(brickX, brickY);
+                    graphics.lineTo(brickX + brickW, brickY + brickH * 0.3);
+                    graphics.lineTo(brickX + brickW * 0.8, brickY + brickH);
+                    graphics.lineTo(brickX - brickW * 0.2, brickY + brickH * 0.7);
+                    graphics.closePath();
+                    graphics.endFill();
                 }
             }
 
-            graphics.endFill();
+            // Трещины между камнями
+            graphics.lineStyle(1 + Math.random() * 0.5, 0x0a0806, 0.7);
+            for (let c = 0; c < 5; c++) {
+                const crackX = (Math.random() - 0.5) * ts * 0.6;
+                const crackY = (Math.random() - 0.5) * ts * 0.3;
+                graphics.moveTo(crackX, crackY);
+                let cx = crackX;
+                let cy = crackY;
+                for (let seg = 0; seg < 3; seg++) {
+                    cx += (Math.random() - 0.5) * ts * 0.2;
+                    cy += (Math.random() - 0.5) * ts * 0.15;
+                    graphics.lineTo(cx, cy);
+                }
+            }
 
-            graphics.lineStyle(1, 0x4a3b2a);
+            // Сколы и неровности на поверхности
+            for (let chip = 0; chip < 6; chip++) {
+                const chipX = (Math.random() - 0.5) * ts * 0.5;
+                const chipY = (Math.random() - 0.5) * ts * 0.25;
+                const chipSize = ts * (0.02 + Math.random() * 0.03);
+                graphics.beginFill(0x0a0806, 0.4);
+                graphics.drawCircle(chipX, chipY, chipSize);
+                graphics.endFill();
+            }
+
+            // Контур стены по краям
+            graphics.lineStyle(2, 0x0a0806, 0.8);
             graphics.moveTo(0, 0);
-            graphics.lineTo(tileSize / 2, tileSize / 4);
-            graphics.lineTo(0, tileSize / 2);
-            graphics.lineTo(-tileSize / 2, tileSize / 4);
+            graphics.lineTo(ts / 2, ts / 4);
+            graphics.lineTo(0, ts / 2);
+            graphics.lineTo(-ts / 2, ts / 4);
             graphics.closePath();
 
             const texture = this.app.renderer.generateTexture(graphics);
@@ -765,33 +838,75 @@ class PIXIRenderer {
     createColumnTexture(tileSize) {
         try {
             const graphics = new PIXI.Graphics();
+            const ts = tileSize;
 
-            graphics.beginFill(this.hexToDecimal(this.colors.wallDark));
-            this.drawIsometricTile(graphics, 0, 0, tileSize * 0.6, tileSize / 2 * 0.6);
+            // Тень под колонной
+            graphics.beginFill(0x0a0806, 0.4);
+            this.drawIsometricTile(graphics, 0, 0, ts * 0.5, ts / 2 * 0.5);
             graphics.endFill();
 
-            graphics.beginFill(this.hexToDecimal(this.colors.wall));
-            graphics.moveTo(0, -tileSize * 0.1);
-            graphics.lineTo(tileSize * 0.2, tileSize * 0.05);
-            graphics.lineTo(0, tileSize * 0.2);
-            graphics.lineTo(-tileSize * 0.2, tileSize * 0.05);
+            // Основание колонны - более широкое
+            graphics.beginFill(this.hexToDecimal(this.colors.wallDark));
+            graphics.moveTo(-ts * 0.25, ts * 0.05);
+            graphics.lineTo(ts * 0.25, ts * 0.1);
+            graphics.lineTo(0, ts * 0.2);
+            graphics.lineTo(-ts * 0.3, ts * 0.12);
             graphics.closePath();
             graphics.endFill();
 
-            graphics.beginFill(this.hexToDecimal(this.colors.wallDark));
-            graphics.moveTo(0, -tileSize * 0.2);
-            graphics.lineTo(tileSize * 0.25, -tileSize * 0.05);
-            graphics.lineTo(0, tileSize * 0.1);
-            graphics.lineTo(-tileSize * 0.25, -tileSize * 0.05);
+            // Тело колонны - готическая форма с вертикальными бороздами
+            const columnColors = [0x2d2520, 0x3d3028, 0x1a1512];
+            for (let i = 0; i < 4; i++) {
+                const stripeX = (i - 1.5) * ts * 0.12;
+                const stripeW = ts * 0.08;
+                const color = columnColors[i % columnColors.length];
+                graphics.beginFill(color, 0.7 + Math.random() * 0.3);
+                graphics.moveTo(stripeX, -ts * 0.15);
+                graphics.lineTo(stripeX + stripeW * 0.8, -ts * 0.08);
+                graphics.lineTo(stripeX + stripeW, ts * 0.08);
+                graphics.lineTo(stripeX + stripeW * 0.2, ts * 0.15);
+                graphics.closePath();
+                graphics.endFill();
+            }
+
+            // Вертикальные борозды
+            graphics.lineStyle(1, 0x0a0806, 0.5);
+            for (let g = 0; g < 3; g++) {
+                const grooveX = (g - 1) * ts * 0.15;
+                graphics.moveTo(grooveX, -ts * 0.12);
+                graphics.lineTo(grooveX, ts * 0.1);
+            }
+
+            // Верхняя часть колонны - декоративная капитель
+            graphics.beginFill(this.hexToDecimal(this.colors.wall), 0.8);
+            graphics.moveTo(0, -ts * 0.22);
+            graphics.lineTo(ts * 0.28, -ts * 0.12);
+            graphics.lineTo(0, -ts * 0.05);
+            graphics.lineTo(-ts * 0.28, -ts * 0.12);
             graphics.closePath();
             graphics.endFill();
 
-            graphics.lineStyle(1, 0x4a3b2a);
+            // Декоративные элементы на капителе
+            graphics.beginFill(0x1a1512, 0.6);
+            for (let d = 0; d < 4; d++) {
+                const decX = (d - 1.5) * ts * 0.12;
+                graphics.drawCircle(decX, -ts * 0.15, ts * 0.03);
+            }
+            graphics.endFill();
+
+            // Контур колонны
+            graphics.lineStyle(2, 0x0a0806, 0.7);
             graphics.moveTo(0, 0);
-            graphics.lineTo(tileSize / 2, tileSize / 4);
-            graphics.lineTo(0, tileSize / 2);
-            graphics.lineTo(-tileSize / 2, tileSize / 4);
+            graphics.lineTo(ts / 2, ts / 4);
+            graphics.lineTo(0, ts / 2);
+            graphics.lineTo(-ts / 2, ts / 4);
             graphics.closePath();
+
+            // Трещины на поверхности
+            graphics.lineStyle(1, 0x0a0806, 0.3);
+            graphics.moveTo(-ts * 0.1, -ts * 0.05);
+            graphics.lineTo(-ts * 0.08, ts * 0.02);
+            graphics.lineTo(-ts * 0.12, ts * 0.08);
 
             const texture = this.app.renderer.generateTexture(graphics);
             graphics.destroy();
@@ -814,33 +929,86 @@ class PIXIRenderer {
     createTreeTexture(tileSize) {
         try {
             const graphics = new PIXI.Graphics();
+            const ts = tileSize;
 
-            graphics.beginFill(this.hexToDecimal(this.colors.treeTrunk));
-            this.drawIsometricTile(graphics, 0, 0, tileSize * 0.4, tileSize / 2 * 0.4);
+            // Тень под деревом
+            graphics.beginFill(0x0a0806, 0.3);
+            graphics.drawCircle(0, ts * 0.15, ts * 0.25);
             graphics.endFill();
 
-            graphics.beginFill(0x4a2c22);
-            graphics.moveTo(-tileSize * 0.1, tileSize * 0.1);
-            graphics.lineTo(tileSize * 0.1, tileSize * 0.2);
-            graphics.lineTo(0, tileSize * 0.3);
-            graphics.lineTo(-tileSize * 0.2, tileSize * 0.2);
+            // Основание ствола с корнями
+            const rootColors = [0x3d2818, 0x2d1f12, 0x4a3525];
+            for (let r = 0; r < 5; r++) {
+                const rootAngle = (r / 5) * Math.PI + Math.PI;
+                const rootLen = ts * (0.15 + Math.random() * 0.1);
+                const rootX = Math.cos(rootAngle) * rootLen;
+                const rootY = ts * 0.1 + Math.sin(rootAngle) * rootLen * 0.3;
+                const rootW = ts * (0.04 + Math.random() * 0.03);
+                graphics.beginFill(rootColors[r % rootColors.length], 0.8);
+                graphics.moveTo(rootX, rootY);
+                graphics.quadraticCurveTo(rootX * 0.5, rootY - ts * 0.05, 0, ts * 0.12);
+                graphics.lineTo(rootX * 0.3, rootY + ts * 0.05);
+                graphics.closePath();
+                graphics.endFill();
+            }
+
+            // Ствол - искривлённый, с сучками
+            graphics.beginFill(this.hexToDecimal(this.colors.treeTrunk));
+            graphics.moveTo(-ts * 0.12, ts * 0.08);
+            graphics.lineTo(ts * 0.12, ts * 0.1);
+            graphics.lineTo(ts * 0.08, -ts * 0.15);
+            graphics.lineTo(-ts * 0.08, -ts * 0.18);
             graphics.closePath();
             graphics.endFill();
 
-            graphics.beginFill(this.hexToDecimal(this.colors.treeLeaves));
-            graphics.drawCircle(0, -tileSize * 0.3, tileSize * 0.4);
+            // Текстура коры - вертикальные борозды
+            graphics.lineStyle(1, 0x1a1008, 0.5);
+            for (let b = 0; b < 3; b++) {
+                const barkX = (b - 1) * ts * 0.06;
+                graphics.moveTo(barkX, -ts * 0.12);
+                graphics.lineTo(barkX + Math.sin(b) * ts * 0.02, ts * 0.05);
+            }
+
+            // Сучки на стволе
+            graphics.beginFill(0x2d1f12, 0.7);
+            graphics.drawCircle(-ts * 0.08, -ts * 0.05, ts * 0.03);
+            graphics.drawCircle(ts * 0.07, -ts * 0.02, ts * 0.025);
             graphics.endFill();
 
-            graphics.beginFill(0x2e7a2f);
-            graphics.drawCircle(-tileSize * 0.1, -tileSize * 0.4, tileSize * 0.2);
-            graphics.endFill();
+            // Крона - тёмная, "мертвая" листва
+            const leafColors = [0x1a2f1a, 0x2a3f2a, 0x0f1f0f, 0x1a2f1a];
+            for (let l = 0; l < 8; l++) {
+                const leafAngle = (l / 8) * Math.PI * 2;
+                const leafDist = ts * (0.15 + Math.random() * 0.15);
+                const leafX = Math.cos(leafAngle) * leafDist;
+                const leafY = -ts * 0.25 + Math.sin(leafAngle) * leafDist * 0.5;
+                const leafSize = ts * (0.12 + Math.random() * 0.08);
+                const color = leafColors[l % leafColors.length];
+                graphics.beginFill(color, 0.7 + Math.random() * 0.3);
+                graphics.drawCircle(leafX, leafY, leafSize);
+                graphics.endFill();
+            }
 
-            graphics.beginFill(0x2e7a2f);
-            graphics.drawCircle(tileSize * 0.15, -tileSize * 0.25, tileSize * 0.15);
-            graphics.endFill();
+            // Ветки - голые, искривлённые
+            graphics.lineStyle(2, this.hexToDecimal(this.colors.treeTrunk), 0.8);
+            for (let br = 0; br < 4; br++) {
+                const branchAngle = (br / 4) * Math.PI * 2;
+                const branchStartX = Math.cos(branchAngle) * ts * 0.08;
+                const branchStartY = -ts * 0.28 + Math.sin(branchAngle) * ts * 0.05;
+                const branchEndX = Math.cos(branchAngle) * ts * 0.25;
+                const branchEndY = -ts * 0.35 + Math.sin(branchAngle) * ts * 0.1;
+                graphics.moveTo(branchStartX, branchStartY);
+                graphics.quadraticCurveTo(
+                    (branchStartX + branchEndX) / 2,
+                    (branchStartY + branchEndY) / 2 - ts * 0.05,
+                    branchEndX,
+                    branchEndY
+                );
+            }
 
-            graphics.lineStyle(1, 0x2a5a2a);
-            graphics.drawCircle(0, -tileSize * 0.3, tileSize * 0.4);
+            // Контур дерева
+            graphics.lineStyle(1, 0x0a0806, 0.4);
+            graphics.drawCircle(0, -ts * 0.28, ts * 0.35);
 
             const texture = this.app.renderer.generateTexture(graphics);
             graphics.destroy();
@@ -863,31 +1031,105 @@ class PIXIRenderer {
     createRockTexture(tileSize) {
         try {
             const graphics = new PIXI.Graphics();
+            const ts = tileSize;
 
-            graphics.beginFill(this.hexToDecimal(this.colors.rock));
-            this.drawIsometricTile(graphics, 0, 0, tileSize * 0.7, tileSize / 2 * 0.7);
+            // Тень под скалой
+            graphics.beginFill(0x0a0806, 0.3);
+            graphics.moveTo(-ts * 0.3, ts * 0.1);
+            graphics.lineTo(ts * 0.3, ts * 0.15);
+            graphics.lineTo(0, ts * 0.25);
+            graphics.lineTo(-ts * 0.35, ts * 0.18);
+            graphics.closePath();
             graphics.endFill();
 
-            graphics.beginFill(0x6d4c41);
-            graphics.moveTo(0, -tileSize * 0.1);
-            graphics.lineTo(tileSize * 0.15, tileSize * 0.05);
-            graphics.lineTo(0, tileSize * 0.2);
-            graphics.lineTo(-tileSize * 0.15, tileSize * 0.05);
+            // Основная скала - острая, рваная форма
+            const rockColors = [0x1f1a17, 0x2d2522, 0x3d3028, 0x1a1512];
+            
+            // Нижний слой скалы
+            graphics.beginFill(rockColors[0], 0.9);
+            graphics.moveTo(-ts * 0.35, ts * 0.08);
+            graphics.lineTo(-ts * 0.2, ts * 0.02);
+            graphics.lineTo(-ts * 0.3, -ts * 0.08);
+            graphics.lineTo(-ts * 0.15, -ts * 0.02);
+            graphics.lineTo(0, -ts * 0.12);
+            graphics.lineTo(ts * 0.2, -ts * 0.05);
+            graphics.lineTo(ts * 0.35, ts * 0.05);
+            graphics.lineTo(ts * 0.25, ts * 0.12);
+            graphics.lineTo(0, ts * 0.18);
+            graphics.lineTo(-ts * 0.25, ts * 0.15);
             graphics.closePath();
-
-            graphics.moveTo(-tileSize * 0.2, tileSize * 0.1);
-            graphics.lineTo(-tileSize * 0.05, tileSize * 0.25);
-            graphics.lineTo(-tileSize * 0.15, tileSize * 0.35);
-            graphics.lineTo(-tileSize * 0.3, tileSize * 0.2);
-            graphics.closePath();
-
             graphics.endFill();
 
-            graphics.lineStyle(1, 0x5a3c2a);
-            graphics.moveTo(0, 0);
-            graphics.lineTo(tileSize / 2, tileSize / 4);
-            graphics.lineTo(0, tileSize / 2);
-            graphics.lineTo(-tileSize / 2, tileSize / 4);
+            // Средний слой - более светлые камни
+            for (let r = 0; r < 5; r++) {
+                const rockX = (r - 2) * ts * 0.15 + (Math.random() - 0.5) * ts * 0.1;
+                const rockY = -ts * 0.05 + (Math.random() - 0.5) * ts * 0.1;
+                const rockW = ts * (0.08 + Math.random() * 0.06);
+                const rockH = ts * (0.04 + Math.random() * 0.03);
+                const color = rockColors[1 + (r % 2)];
+                
+                graphics.beginFill(color, 0.7 + Math.random() * 0.3);
+                graphics.moveTo(rockX, rockY);
+                graphics.lineTo(rockX + rockW * 0.5, rockY - rockH * 0.3);
+                graphics.lineTo(rockX + rockW, rockY);
+                graphics.lineTo(rockX + rockW * 0.7, rockY + rockH);
+                graphics.lineTo(rockX + rockW * 0.2, rockY + rockH * 0.8);
+                graphics.lineTo(rockX - rockW * 0.2, rockY + rockH * 0.5);
+                graphics.closePath();
+                graphics.endFill();
+            }
+
+            // Верхние острые пики
+            graphics.beginFill(rockColors[2], 0.8);
+            for (let p = 0; p < 4; p++) {
+                const peakX = (p - 1.5) * ts * 0.2;
+                const peakH = ts * (0.15 + Math.random() * 0.1);
+                graphics.moveTo(peakX - ts * 0.08, -ts * 0.02);
+                graphics.lineTo(peakX, -peakH);
+                graphics.lineTo(peakX + ts * 0.08, -ts * 0.02);
+                graphics.closePath();
+            }
+            graphics.endFill();
+
+            // Трещины и расщелины
+            graphics.lineStyle(1, 0x0a0806, 0.6);
+            for (let c = 0; c < 4; c++) {
+                const crackStartX = (Math.random() - 0.5) * ts * 0.5;
+                const crackStartY = (Math.random() - 0.5) * ts * 0.1;
+                graphics.moveTo(crackStartX, crackStartY);
+                let cx = crackStartX;
+                let cy = crackStartY;
+                for (let seg = 0; seg < 3; seg++) {
+                    cx += (Math.random() - 0.5) * ts * 0.15;
+                    cy += ts * 0.05 + Math.random() * ts * 0.05;
+                    if (cy < ts * 0.15) {
+                        graphics.lineTo(cx, cy);
+                    }
+                }
+            }
+
+            // Сколы и острые края
+            graphics.lineStyle(1, 0x0a0806, 0.4);
+            graphics.moveTo(-ts * 0.3, ts * 0.08);
+            graphics.lineTo(-ts * 0.35, ts * 0.12);
+            graphics.lineTo(-ts * 0.25, ts * 0.15);
+            
+            graphics.moveTo(ts * 0.3, ts * 0.1);
+            graphics.lineTo(ts * 0.38, ts * 0.15);
+            graphics.lineTo(ts * 0.25, ts * 0.18);
+
+            // Контур скалы
+            graphics.lineStyle(2, 0x0a0806, 0.5);
+            graphics.moveTo(-ts * 0.35, ts * 0.08);
+            graphics.lineTo(-ts * 0.2, ts * 0.02);
+            graphics.lineTo(-ts * 0.3, -ts * 0.08);
+            graphics.lineTo(-ts * 0.15, -ts * 0.02);
+            graphics.lineTo(0, -ts * 0.12);
+            graphics.lineTo(ts * 0.2, -ts * 0.05);
+            graphics.lineTo(ts * 0.35, ts * 0.05);
+            graphics.lineTo(ts * 0.25, ts * 0.12);
+            graphics.lineTo(0, ts * 0.18);
+            graphics.lineTo(-ts * 0.25, ts * 0.15);
             graphics.closePath();
 
             const texture = this.app.renderer.generateTexture(graphics);
@@ -911,28 +1153,69 @@ class PIXIRenderer {
     createWaterTexture(tileSize) {
         try {
             const graphics = new PIXI.Graphics();
+            const ts = tileSize;
 
+            // Основная вода - тёмная, мутная
             graphics.beginFill(this.hexToDecimal(this.colors.water));
-            this.drawIsometricTile(graphics, 0, 0, tileSize, tileSize / 2);
+            this.drawIsometricTile(graphics, 0, 0, ts, ts / 2);
             graphics.endFill();
 
-            graphics.beginFill(0x42a5f5);
-            for (let i = 0; i < 3; i++) {
-                const waveX = (i - 1) * tileSize * 0.2;
-                const waveY = Math.sin(Date.now() / 500 + i) * tileSize * 0.05;
-                graphics.drawCircle(waveX, waveY, tileSize * 0.08);
+            // Градиент затемнения к центру
+            graphics.beginFill(0x0a0f15, 0.3);
+            this.drawIsometricTile(graphics, 0, 0, ts * 0.8, ts / 2 * 0.8);
+            graphics.endFill();
+
+            // Волны и рябь на поверхности
+            const waveColors = [0x2a3f4f, 0x3a5a6f, 0x1a2f3f];
+            for (let w = 0; w < 6; w++) {
+                const waveX = (Math.random() - 0.5) * ts * 0.5;
+                const waveY = (Math.random() - 0.5) * ts * 0.2 + ts * 0.05;
+                const waveW = ts * (0.08 + Math.random() * 0.1);
+                const waveH = ts * (0.02 + Math.random() * 0.02);
+                const color = waveColors[Math.floor(Math.random() * waveColors.length)];
+                
+                graphics.beginFill(color, 0.4 + Math.random() * 0.3);
+                graphics.moveTo(waveX - waveW / 2, waveY);
+                graphics.quadraticCurveTo(
+                    waveX, waveY - waveH * 2,
+                    waveX + waveW / 2, waveY
+                );
+                graphics.quadraticCurveTo(
+                    waveX, waveY + waveH,
+                    waveX - waveW / 2, waveY
+                );
+                graphics.closePath();
+                graphics.endFill();
             }
-            graphics.endFill();
 
-            graphics.beginFill(0x90caf9);
-            graphics.drawCircle(-tileSize * 0.2, -tileSize * 0.1, tileSize * 0.05);
-            graphics.endFill();
+            // Блестящие блики на воде
+            for (let s = 0; s < 4; s++) {
+                const shineX = (Math.random() - 0.5) * ts * 0.4;
+                const shineY = (Math.random() - 0.5) * ts * 0.15 + ts * 0.08;
+                const shineSize = ts * (0.02 + Math.random() * 0.02);
+                graphics.beginFill(0x4a6f7f, 0.3 + Math.random() * 0.2);
+                graphics.drawEllipse(shineX, shineY, shineSize, shineSize * 0.4);
+                graphics.endFill();
+            }
 
-            graphics.lineStyle(1, 0x0d47a1);
+            // Плавающие объекты (мусор, листья)
+            for (let d = 0; d < 3; d++) {
+                const debrisX = (Math.random() - 0.5) * ts * 0.3;
+                const debrisY = (Math.random() - 0.5) * ts * 0.1 + ts * 0.05;
+                graphics.beginFill(0x1a1510, 0.5);
+                graphics.moveTo(debrisX, debrisY);
+                graphics.lineTo(debrisX + ts * 0.03, debrisY - ts * 0.01);
+                graphics.lineTo(debrisX + ts * 0.02, debrisY + ts * 0.02);
+                graphics.closePath();
+                graphics.endFill();
+            }
+
+            // Контур воды по краям
+            graphics.lineStyle(2, 0x0a0f15, 0.6);
             graphics.moveTo(0, 0);
-            graphics.lineTo(tileSize / 2, tileSize / 4);
-            graphics.lineTo(0, tileSize / 2);
-            graphics.lineTo(-tileSize / 2, tileSize / 4);
+            graphics.lineTo(ts / 2, ts / 4);
+            graphics.lineTo(0, ts / 2);
+            graphics.lineTo(-ts / 2, ts / 4);
             graphics.closePath();
 
             const texture = this.app.renderer.generateTexture(graphics);
@@ -956,29 +1239,82 @@ class PIXIRenderer {
     createIceTexture(tileSize) {
         try {
             const graphics = new PIXI.Graphics();
+            const ts = tileSize;
 
+            // Основной лёд - грязный, тёмный
             graphics.beginFill(this.hexToDecimal(this.colors.ice));
-            this.drawIsometricTile(graphics, 0, 0, tileSize, tileSize / 2);
+            this.drawIsometricTile(graphics, 0, 0, ts, ts / 2);
             graphics.endFill();
 
-            graphics.beginFill(0xe3f2fd);
-            graphics.drawCircle(-tileSize * 0.2, -tileSize * 0.1, tileSize * 0.08);
+            // Градиент затемнения
+            graphics.beginFill(0x1a252a, 0.3);
+            this.drawIsometricTile(graphics, 0, 0, ts * 0.85, ts / 2 * 0.85);
             graphics.endFill();
 
-            graphics.beginFill(0xe3f2fd);
-            graphics.drawCircle(tileSize * 0.15, -tileSize * 0.15, tileSize * 0.05);
-            graphics.endFill();
+            // Трещины на льду
+            const crackColors = [0x3d4f55, 0x2d3a3f, 0x4a5f65];
+            for (let c = 0; c < 5; c++) {
+                const crackStartX = (Math.random() - 0.5) * ts * 0.5;
+                const crackStartY = (Math.random() - 0.5) * ts * 0.2;
+                const color = crackColors[Math.floor(Math.random() * crackColors.length)];
+                
+                graphics.lineStyle(1 + Math.random(), color, 0.5 + Math.random() * 0.3);
+                graphics.moveTo(crackStartX, crackStartY);
+                let cx = crackStartX;
+                let cy = crackStartY;
+                for (let seg = 0; seg < 4; seg++) {
+                    cx += (Math.random() - 0.5) * ts * 0.15;
+                    cy += (Math.random() - 0.5) * ts * 0.1;
+                    if (Math.abs(cx) < ts * 0.4 && Math.abs(cy) < ts * 0.2) {
+                        graphics.lineTo(cx, cy);
+                    }
+                }
+            }
 
-            graphics.lineStyle(1, 0x90caf9);
-            graphics.moveTo(-tileSize * 0.2, 0);
-            graphics.lineTo(tileSize * 0.1, -tileSize * 0.1);
-            graphics.lineTo(tileSize * 0.2, tileSize * 0.1);
+            // Грязные вкрапления
+            for (let d = 0; d < 8; d++) {
+                const dirtX = (Math.random() - 0.5) * ts * 0.5;
+                const dirtY = (Math.random() - 0.5) * ts * 0.2;
+                const dirtSize = ts * (0.02 + Math.random() * 0.03);
+                graphics.beginFill(0x1a1512, 0.3 + Math.random() * 0.3);
+                graphics.drawCircle(dirtX, dirtY, dirtSize);
+                graphics.endFill();
+            }
 
-            graphics.lineStyle(1, 0x90caf9);
+            // Ледяные кристаллы / осколки
+            const crystalColors = [0x3d5a65, 0x4a6f7f, 0x2d4a55];
+            for (let k = 0; k < 4; k++) {
+                const crystalX = (Math.random() - 0.5) * ts * 0.4;
+                const crystalY = (Math.random() - 0.5) * ts * 0.15;
+                const crystalW = ts * (0.04 + Math.random() * 0.03);
+                const crystalH = ts * (0.02 + Math.random() * 0.02);
+                const color = crystalColors[k % crystalColors.length];
+                
+                graphics.beginFill(color, 0.4 + Math.random() * 0.3);
+                graphics.moveTo(crystalX, crystalY - crystalH);
+                graphics.lineTo(crystalX + crystalW, crystalY);
+                graphics.lineTo(crystalX, crystalY + crystalH);
+                graphics.lineTo(crystalX - crystalW * 0.5, crystalY);
+                graphics.closePath();
+                graphics.endFill();
+            }
+
+            // Белесые пятна инея
+            for (let f = 0; f < 5; f++) {
+                const frostX = (Math.random() - 0.5) * ts * 0.4;
+                const frostY = (Math.random() - 0.5) * ts * 0.15;
+                const frostSize = ts * (0.03 + Math.random() * 0.03);
+                graphics.beginFill(0x4a5f65, 0.2 + Math.random() * 0.2);
+                graphics.drawCircle(frostX, frostY, frostSize);
+                graphics.endFill();
+            }
+
+            // Контур льда по краям
+            graphics.lineStyle(2, 0x1a252a, 0.6);
             graphics.moveTo(0, 0);
-            graphics.lineTo(tileSize / 2, tileSize / 4);
-            graphics.lineTo(0, tileSize / 2);
-            graphics.lineTo(-tileSize / 2, tileSize / 4);
+            graphics.lineTo(ts / 2, ts / 4);
+            graphics.lineTo(0, ts / 2);
+            graphics.lineTo(-ts / 2, ts / 4);
             graphics.closePath();
 
             const texture = this.app.renderer.generateTexture(graphics);
@@ -1002,26 +1338,95 @@ class PIXIRenderer {
     createDecorationTexture(tileSize) {
         try {
             const graphics = new PIXI.Graphics();
+            const ts = tileSize;
 
-            graphics.beginFill(this.hexToDecimal(this.colors.decoration));
-            graphics.drawCircle(0, 0, tileSize * 0.15);
+            // Тень под растительностью
+            graphics.beginFill(0x0a0806, 0.3);
+            graphics.drawCircle(0, ts * 0.08, ts * 0.15);
             graphics.endFill();
 
-            graphics.beginFill(0x7cb342);
-            for (let i = 0; i < 5; i++) {
-                const angle = (i * 2 * Math.PI) / 5;
-                const petalX = Math.cos(angle) * tileSize * 0.1;
-                const petalY = Math.sin(angle) * tileSize * 0.05;
-                graphics.drawCircle(petalX, petalY, tileSize * 0.08);
+            // Тёмная трава / мох - основа
+            const grassColors = [0x1a2f1a, 0x2a3f2a, 0x0f1f0f, 0x1a2f1a];
+            for (let g = 0; g < 12; g++) {
+                const grassX = (Math.random() - 0.5) * ts * 0.3;
+                const grassY = (Math.random() - 0.5) * ts * 0.15 + ts * 0.05;
+                const grassH = ts * (0.06 + Math.random() * 0.05);
+                const grassW = ts * (0.02 + Math.random() * 0.02);
+                const color = grassColors[Math.floor(Math.random() * grassColors.length)];
+                
+                graphics.beginFill(color, 0.6 + Math.random() * 0.3);
+                graphics.moveTo(grassX, grassY);
+                graphics.quadraticCurveTo(
+                    grassX + (Math.random() - 0.5) * ts * 0.03,
+                    grassY - grassH * 0.5,
+                    grassX,
+                    grassY - grassH
+                );
+                graphics.lineTo(grassX + grassW, grassY - grassH * 0.8);
+                graphics.lineTo(grassX + grassW, grassY);
+                graphics.closePath();
+                graphics.endFill();
             }
-            graphics.endFill();
 
-            graphics.beginFill(0xffff00);
-            graphics.drawCircle(0, 0, tileSize * 0.05);
-            graphics.endFill();
+            // Грибы - мрачные, тёмные
+            const mushroomColors = [0x3d2f3d, 0x2a1f2a, 0x4a3f4a];
+            for (let m = 0; m < 3; m++) {
+                const mushX = (Math.random() - 0.5) * ts * 0.25;
+                const mushY = (Math.random() - 0.5) * ts * 0.1 + ts * 0.05;
+                const mushSize = ts * (0.04 + Math.random() * 0.03);
+                const color = mushroomColors[m % mushroomColors.length];
+                
+                // Ножка гриба
+                graphics.beginFill(0x2a1f1a, 0.7);
+                graphics.moveTo(mushX - ts * 0.02, mushY);
+                graphics.lineTo(mushX + ts * 0.02, mushY);
+                graphics.lineTo(mushX + ts * 0.015, mushY - ts * 0.04);
+                graphics.lineTo(mushX - ts * 0.015, mushY - ts * 0.04);
+                graphics.closePath();
+                graphics.endFill();
+                
+                // Шляпка гриба
+                graphics.beginFill(color, 0.8);
+                graphics.moveTo(mushX - mushSize, mushY - ts * 0.03);
+                graphics.quadraticCurveTo(
+                    mushX, mushY - ts * 0.03 - mushSize,
+                    mushX + mushSize, mushY - ts * 0.03
+                );
+                graphics.lineTo(mushX + mushSize * 0.8, mushY - ts * 0.02);
+                graphics.lineTo(mushX - mushSize * 0.8, mushY - ts * 0.02);
+                graphics.closePath();
+                graphics.endFill();
+            }
 
-            graphics.lineStyle(1, 0x689f38);
-            graphics.drawCircle(0, 0, tileSize * 0.15);
+            // Сухие листья / опавшая листва
+            for (let l = 0; l < 5; l++) {
+                const leafX = (Math.random() - 0.5) * ts * 0.3;
+                const leafY = (Math.random() - 0.5) * ts * 0.12 + ts * 0.06;
+                const leafSize = ts * (0.03 + Math.random() * 0.02);
+                const leafAngle = Math.random() * Math.PI * 2;
+                
+                graphics.beginFill(0x2a1f1a, 0.5);
+                graphics.moveTo(leafX, leafY);
+                for (let p = 0; p < 5; p++) {
+                    const petalAngle = leafAngle + (p / 5) * Math.PI * 2;
+                    const petalX = Math.cos(petalAngle) * leafSize;
+                    const petalY = Math.sin(petalAngle) * leafSize * 0.5;
+                    graphics.lineTo(leafX + petalX, leafY + petalY);
+                }
+                graphics.closePath();
+                graphics.endFill();
+            }
+
+            // Тёмные ягоды / цветы
+            for (let b = 0; b < 3; b++) {
+                const berryX = (Math.random() - 0.5) * ts * 0.2;
+                const berryY = (Math.random() - 0.5) * ts * 0.08 + ts * 0.04;
+                const berrySize = ts * (0.02 + Math.random() * 0.015);
+                
+                graphics.beginFill(0x3a1f2a, 0.7);
+                graphics.drawCircle(berryX, berryY, berrySize);
+                graphics.endFill();
+            }
 
             const texture = this.app.renderer.generateTexture(graphics);
             graphics.destroy();
@@ -1820,10 +2225,53 @@ class PIXIRenderer {
      * @param {number} height - высота
      */
     drawIsometricTile(graphics, x, y, width, height) {
+        // Рисуем изометрический тайл с псевдо-3D эффектом
+        // Верхняя грань (основной ромб)
         graphics.moveTo(x, y);
         graphics.lineTo(x + width / 2, y + height / 2);
         graphics.lineTo(x, y + height);
         graphics.lineTo(x - width / 2, y + height / 2);
+        graphics.closePath();
+    }
+
+    /**
+     * Рисование изометрического тайла с 3D эффектом (боковые грани)
+     * @param {PIXI.Graphics} graphics - объект Graphics для рисования
+     * @param {number} x - X координата центра
+     * @param {number} y - Y координата центра
+     * @param {number} width - ширина тайла
+     * @param {number} height - высота тайла
+     * @param {number} depth - глубина 3D эффекта
+     * @param {number} sideColor - цвет боковых граней
+     */
+    drawIsometricTile3D(graphics, x, y, width, height, depth = 4, sideColor = 0x1a1512) {
+        const halfW = width / 2;
+        const halfH = height / 2;
+
+        // Рисуем боковые грани для 3D эффекта
+        // Правая грань
+        graphics.beginFill(sideColor, 0.7);
+        graphics.moveTo(x + halfW, y + halfH);
+        graphics.lineTo(x + halfW, y + halfH + depth);
+        graphics.lineTo(x, y + height + depth);
+        graphics.lineTo(x, y + height);
+        graphics.closePath();
+        graphics.endFill();
+
+        // Левая грань
+        graphics.beginFill(sideColor, 0.5);
+        graphics.moveTo(x - halfW, y + halfH);
+        graphics.lineTo(x - halfW, y + halfH + depth);
+        graphics.lineTo(x, y + height + depth);
+        graphics.lineTo(x, y + height);
+        graphics.closePath();
+        graphics.endFill();
+
+        // Верхняя грань (основной ромб)
+        graphics.moveTo(x, y);
+        graphics.lineTo(x + halfW, y + halfH);
+        graphics.lineTo(x, y + height);
+        graphics.lineTo(x - halfW, y + halfH);
         graphics.closePath();
     }
 
