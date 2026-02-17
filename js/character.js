@@ -167,7 +167,7 @@ class Character {
         } else {
             // Промах - вызываем эффект уворота для цели
             if (typeof game !== 'undefined' && game.combatEffects) {
-С                game.combatEffects.triggerDodge(target.x, target.y);
+                game.combatEffects.triggerDodge(target.x, target.y);
             }
             console.log('Промах!');
             return 0;

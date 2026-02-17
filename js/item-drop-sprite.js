@@ -1,6 +1,7 @@
 /**
  * Класс спрайта предмета для PIXI рендерера
  * Предназначен для отображения выпавших предметов на земле
+ * Аутентичный dark fantasy стиль в стиле Diablo
  */
 
 class ItemDropSprite extends PIXI.Container {
@@ -19,6 +20,18 @@ class ItemDropSprite extends PIXI.Container {
         this.baseWidth = drop.width;
         this.baseHeight = drop.height;
 
+        // Цвета в стиле Diablo
+        this.colors = {
+            // Статичная тёмная рамка (не меняется)
+            border: 0x4a3a2a,
+            borderInner: 0x8b7355,
+            // Тёмный фон
+            background: 0x1a1414,
+            backgroundHover: 0x2a1f1f,
+            // Золотые угловые украшения
+            corner: 0xd4af37
+        };
+
         // Создаём визуальные элементы предмета
         this.createVisuals();
 
@@ -33,29 +46,29 @@ class ItemDropSprite extends PIXI.Container {
         const width = this.baseWidth;
         const height = this.baseHeight;
 
-        // Фон предмета (полупрозрачная заливка)
+        // Фон предмета (тёмный, полупрозрачный)
         this.background = new PIXI.Graphics();
         this.background.eventMode = 'none'; // Не перехватывает события
         this.drawBackground();
         this.addChild(this.background);
 
-        // Рамка предмета (цвет зависит от редкости)
+        // Рамка предмета (статичная, не меняет цвет)
         this.border = new PIXI.Graphics();
         this.border.eventMode = 'none'; // Не перехватывает события
         this.drawBorder();
         this.addChild(this.border);
 
-        // Название предмета
+        // Название предмета в стиле Diablo
         this.textStyle = new PIXI.TextStyle({
-            fontFamily: 'Arial',
-            fontSize: 10,
+            fontFamily: "'MedievalSharp', Georgia, serif",
+            fontSize: 11,
             fontWeight: 'bold',
             fill: this.drop.item.getColorByRarity(),
             dropShadow: true,
             dropShadowColor: '#000000',
-            dropShadowBlur: 2,
+            dropShadowBlur: 3,
             dropShadowAngle: Math.PI / 2,
-            dropShadowDistance: 1,
+            dropShadowDistance: 2,
         });
 
         this.textLabel = new PIXI.Text(this.drop.item.name, this.textStyle);
@@ -75,22 +88,70 @@ class ItemDropSprite extends PIXI.Container {
         const height = this.baseHeight;
 
         this.background.clear();
-        this.background.beginFill(0xFFFFFF, this.isHovered ? 0.4 : 0.2);
+        // Тёмный полупрозрачный фон, при наведении слегка светлеет
+        const bgColor = this.isHovered ? this.colors.backgroundHover : this.colors.background;
+        const bgAlpha = this.isHovered ? 0.7 : 0.5;
+        this.background.beginFill(bgColor, bgAlpha);
         this.background.drawRect(-width / 2, -height / 2, width, height);
         this.background.endFill();
     }
 
     /**
-     * Отрисовка рамки предмета
+     * Отрисовка рамки предмета (статичная, не меняется)
      */
     drawBorder() {
         const width = this.baseWidth;
         const height = this.baseHeight;
-        const colorHex = this.hexToDecimal(this.drop.item.getColorByRarity());
 
         this.border.clear();
-        this.border.lineStyle(2, colorHex, 1);
+        
+        // Внешняя тёмная рамка
+        this.border.lineStyle(2, this.colors.border, 1);
         this.border.drawRect(-width / 2, -height / 2, width, height);
+        
+        // Внутренняя золотая рамка (тонкая)
+        this.border.lineStyle(1, this.colors.borderInner, 0.6);
+        this.border.drawRect(-width / 2 + 3, -height / 2 + 3, width - 6, height - 6);
+        
+        // Угловые украшения
+        this.drawCorners(this.border, width, height);
+    }
+
+    /**
+     * Отрисовка угловых украшений
+     * @param {PIXI.Graphics} graphics - графика для рисования
+     * @param {number} width - ширина рамки
+     * @param {number} height - высота рамки
+     */
+    drawCorners(graphics, width, height) {
+        const cornerSize = 5;
+        const color = this.colors.corner;
+        const halfW = width / 2;
+        const halfH = height / 2;
+
+        graphics.beginFill(color, 0.7);
+
+        // Верхний левый угол
+        graphics.moveTo(-halfW, -halfH + cornerSize);
+        graphics.lineTo(-halfW, -halfH);
+        graphics.lineTo(-halfW + cornerSize, -halfH);
+
+        // Верхний правый угол
+        graphics.moveTo(halfW, -halfH + cornerSize);
+        graphics.lineTo(halfW, -halfH);
+        graphics.lineTo(halfW - cornerSize, -halfH);
+
+        // Нижний правый угол
+        graphics.moveTo(halfW, halfH - cornerSize);
+        graphics.lineTo(halfW, halfH);
+        graphics.lineTo(halfW - cornerSize, halfH);
+
+        // Нижний левый угол
+        graphics.moveTo(-halfW, halfH - cornerSize);
+        graphics.lineTo(-halfW, halfH);
+        graphics.lineTo(-halfW + cornerSize, halfH);
+
+        graphics.endFill();
     }
 
     /**
@@ -132,46 +193,26 @@ class ItemDropSprite extends PIXI.Container {
             return;
         }
 
-        // Обновляем прозрачность фона
+        // Обновляем фон (прозрачный бекграунд слегка меняет цвет при наведении)
         this.background.clear();
-        this.background.beginFill(0xFFFFFF, this.isHovered ? 0.4 : 0.2);
+        const bgColor = this.isHovered ? this.colors.backgroundHover : this.colors.background;
+        const bgAlpha = this.isHovered ? 0.7 : 0.5;
+        this.background.beginFill(bgColor, bgAlpha);
         this.background.drawRect(-this.baseWidth / 2, -this.baseHeight / 2, this.baseWidth, this.baseHeight);
         this.background.endFill();
 
-        // Обновляем цвет рамки в зависимости от редкости предмета
-        const borderColor = this.drop.item.getColorByRarity();
-        const colorHex = this.hexToDecimal(borderColor);
+        // Перерисовываем рамку (статичная, не меняет цвет)
         this.border.clear();
-        this.border.lineStyle(2, colorHex, 1);
+        this.border.lineStyle(2, this.colors.border, 1);
         this.border.drawRect(-this.baseWidth / 2, -this.baseHeight / 2, this.baseWidth, this.baseHeight);
+        this.border.lineStyle(1, this.colors.borderInner, 0.6);
+        this.border.drawRect(-this.baseWidth / 2 + 3, -this.baseHeight / 2 + 3, this.baseWidth - 6, this.baseHeight - 6);
+        this.drawCorners(this.border, this.baseWidth, this.baseHeight);
 
-        // Обновляем цвет текста в зависимости от редкости и hover
-        const textColor = this.isHovered ? '#FFFF00' : this.drop.item.getColorByRarity();
+        // Обновляем цвет текста в зависимости от редкости (НЕ меняется при наведении)
+        const textColor = this.drop.item.getColorByRarity();
         this.textStyle.fill = textColor;
         this.textLabel.style = this.textStyle;
-
-        // Добавляем свечение для редких предметов при наведении
-        if (this.isHovered && (this.drop.item.rarity === 'epic' || this.drop.item.rarity === 'rare')) {
-            // Проверяем, доступен ли GlowFilter (требуется pixi-filters)
-            if (PIXI.filters && PIXI.filters.GlowFilter) {
-                if (!this.glowFilter) {
-                    this.glowFilter = new PIXI.filters.GlowFilter({
-                        distance: 8,
-                        outerStrength: 2,
-                        innerStrength: 1,
-                        color: this.drop.item.getColorByRarity(),
-                        quality: 0.5
-                    });
-                }
-                this.filters = [this.glowFilter];
-            } else {
-                // Fallback: просто увеличиваем прозрачность
-                this.alpha = 1.0;
-            }
-        } else {
-            this.filters = null;
-            this.alpha = 1.0;
-        }
     }
 
     /**

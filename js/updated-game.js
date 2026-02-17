@@ -77,6 +77,14 @@ class Game {
         // Переменная для отслеживания подсвеченного предмета
         this.hoveredItemDrop = null;
 
+        // Создаём всплывающую подсказку для предметов
+        this.itemTooltip = new ItemTooltip(this.renderer);
+        // Добавляем тултип напрямую в stage (не в mainContainer), чтобы он был в экранных координатах
+        this.renderer.app.stage.addChild(this.itemTooltip);
+        // Устанавливаем высокий zIndex, чтобы тултип был поверх всех элементов
+        this.itemTooltip.zIndex = 1000;
+        this.renderer.app.stage.sortableChildren = true;
+
         // Устанавливаем обработчик изменения уровня персонажа
         this.character.onLevelChanged = (level, x, y) => {
             this.levelUpEffect.triggerLevelUp(x, y, level);
@@ -433,10 +441,12 @@ class Game {
         // Обновляем подсвеченный предмет
         this.hoveredItemDrop = hoveredDrop;
 
-        // Меняем курсор в зависимости от того, находится ли курсор над предметом
+        // Обновляем тултип
         if (hoveredDrop) {
+            this.itemTooltip.show(hoveredDrop);
             this.renderer.app.view.style.cursor = 'pointer'; // Меняем курсор на указатель при наведении на предмет
         } else {
+            this.itemTooltip.hide();
             this.renderer.app.view.style.cursor = 'default'; // Возвращаем стандартный курсор
         }
     }
@@ -1119,6 +1129,11 @@ class Game {
 
         // Рендерим выпавшие предметы через PIXI
         this.renderer.renderItems(this.itemDropSystem.drops, this.hoveredItemDrop);
+
+        // Обновляем и рендерим тултип предмета
+        if (this.itemTooltip && this.hoveredItemDrop) {
+            this.itemTooltip.update(this.hoveredItemDrop);
+        }
 
         // Миникарта обновляется автоматически через UIManager
 
