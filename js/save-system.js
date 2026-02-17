@@ -48,9 +48,13 @@ class SaveSystem {
             
             // Обновляем UI
             this.game.character.updateInventoryUI();
-            document.getElementById('healthValue').textContent = this.game.character.health;
-            document.getElementById('levelValue').textContent = this.game.character.level;
-            
+            if (this.game.uiStatsWindow) {
+                this.game.uiStatsWindow.onStatsUpdate();
+            }
+            if (this.game.uiSkillBar) {
+                this.game.uiSkillBar.update();
+            }
+
             console.log('Игра загружена');
             return true;
         } catch (error) {

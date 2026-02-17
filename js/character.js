@@ -228,14 +228,19 @@ class Character {
      */
     gainExperience(exp) {
         this.experience += exp;
-        
+
         // Проверяем, повысился ли уровень
         while (this.experience >= this.experienceForNextLevel) {
             this.levelUp();
         }
-        
-        // Обновляем UI
-        document.getElementById('levelValue').textContent = this.level;
+
+        // Обновляем UI, если есть доступ к игре
+        if (window.game && window.game.uiStatsWindow && window.game.uiStatsWindow.isOpen) {
+            window.game.uiStatsWindow.onStatsUpdate();
+        }
+        if (window.game && window.game.uiSkillBar) {
+            window.game.uiSkillBar.update();
+        }
     }
     
     /**
@@ -259,9 +264,13 @@ class Character {
         // Добавляем очко навыков за каждый уровень
         this.gainSkillPoint();
 
-        // Обновляем UI
-        document.getElementById('levelValue').textContent = this.level;
-        document.getElementById('healthValue').textContent = this.health;
+        // Обновляем UI, если есть доступ к игре
+        if (window.game && window.game.uiStatsWindow) {
+            window.game.uiStatsWindow.onStatsUpdate();
+        }
+        if (window.game && window.game.uiSkillBar) {
+            window.game.uiSkillBar.update();
+        }
 
         // Уведомляем об изменении уровня (эффект будет вызван в game.js)
         this.onLevelChanged && this.onLevelChanged(this.level, this.x, this.y);
@@ -273,10 +282,10 @@ class Character {
     gainSkillPoint() {
         this.skillPoints++;
         console.log(`Получено очко навыков. Всего доступно: ${this.skillPoints}`);
-        
+
         // Обновляем UI дерева навыков
-        if (window.game && window.game.skillTree) {
-            window.game.skillTree.onCharacterUpdate();
+        if (window.game && window.game.uiSkillTree) {
+            window.game.uiSkillTree.onCharacterUpdate();
         }
     }
     
@@ -520,12 +529,11 @@ class Character {
      */
     updateInventoryUI() {
         // В новой системе инвентарь обновляется в отдельном окне
-        // Этот метод пока оставим для совместимости
-        if (window.game && window.game.inventoryWindow) {
-            window.game.inventoryWindow.onInventoryUpdate();
+        if (window.game && window.game.uiInventory) {
+            window.game.uiInventory.onInventoryUpdate();
         }
     }
-    
+
     /**
      * Повышение уровня навыка
      * @param {string} skillName - название навыка
@@ -533,36 +541,36 @@ class Character {
      */
     upgradeSkill(skillName) {
         const skill = this.skills[skillName];
-        
+
         if (!skill) {
             console.error(`Навык ${skillName} не найден`);
             return false;
         }
-        
+
         if (skill.level >= skill.maxLevel) {
             console.log(`Навык ${skill.name} уже достиг максимального уровня`);
             return false;
         }
-        
+
         if (this.skillPoints < skill.cost) {
             console.log(`Недостаточно очков навыков для прокачки ${skill.name}`);
             return false;
         }
-        
+
         // Повышаем уровень навыка
         skill.level++;
         this.skillPoints -= skill.cost;
 
         console.log(`Навык ${skill.name} прокачан до уровня ${skill.level}`);
-        
+
         // Обновляем UI, если есть доступ к игре
-        if (window.game && window.game.statsWindow) {
-            window.game.statsWindow.onStatsUpdate();
+        if (window.game && window.game.uiStatsWindow) {
+            window.game.uiStatsWindow.onStatsUpdate();
         }
-        
+
         // Обновляем отображение в дереве навыков, если оно открыто
-        if (window.game && window.game.skillTree) {
-            window.game.skillTree.onCharacterUpdate();
+        if (window.game && window.game.uiSkillTree) {
+            window.game.uiSkillTree.onCharacterUpdate();
         }
         
         return true;

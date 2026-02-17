@@ -28,9 +28,6 @@ class Game {
 
         // Управление
         this.keys = {};
-        // Создаем окна инвентаря и характеристик (старая система, для обратной совместимости)
-        this.inventoryWindow = new InventoryWindow(this.character);
-        this.statsWindow = new StatsWindow(this.character);
 
         // === НОВАЯ СИСТЕМА UI НА PIXI ===
         // Инициализация UIManager
@@ -213,8 +210,6 @@ class Game {
                 e.preventDefault();
                 if (this.uiManager) {
                     this.uiManager.toggle('inventory');
-                } else {
-                    this.inventoryWindow.toggle();
                 }
             }
 
@@ -223,19 +218,8 @@ class Game {
                 e.preventDefault();
                 if (this.uiManager) {
                     this.uiManager.toggle('stats');
-                } else {
-                    this.statsWindow.toggle();
                 }
             }
-        });
-
-        // Обработка кнопок сохранения и загрузки
-        document.getElementById('saveButton').addEventListener('click', () => {
-            this.saveSystem.saveGame();
-        });
-
-        document.getElementById('loadButton').addEventListener('click', () => {
-            this.saveSystem.loadGame();
         });
     }
 

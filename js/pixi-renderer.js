@@ -130,13 +130,7 @@ class PIXIRenderer {
         // Для сортировки по глубине
         this.objectLayer.sortableChildren = true;
 
-        // Спрятанный канвас для создания спрайтшитов
-        this.spriteSheetCanvas = document.createElement('canvas');
-        this.spriteSheetCanvas.width = 1024;
-        this.spriteSheetCanvas.height = 1024;
-        this.spriteSheetCtx = this.spriteSheetCanvas.getContext('2d');
-
-        // Текстуры спрайтшита
+        // Текстуры спрайтшита кэшируются через PIXI
         this.spriteSheetTextures = new Map();
 
         // Для culling (отсечение невидимых объектов)
@@ -172,6 +166,9 @@ class PIXIRenderer {
 
         // Система полосок здоровья для врагов
         this.enemyHealthBars = null; // Инициализируется в initEnemyHealthBars()
+
+        // Кэш для текстур вспышек
+        this.flashTextureCache = null;
     }
 
     /**
@@ -705,7 +702,7 @@ class PIXIRenderer {
             console.error('Ошибка при создании текстуры пола:', e);
         }
 
-        // Fallback - создаём через canvas
+        // Резервная текстура через PIXI.Graphics
         return this.createFallbackTexture(tileSize, this.hexToDecimal(this.colors.floor));
     }
 
@@ -1475,32 +1472,30 @@ class PIXIRenderer {
         const width = Math.max(tileSize, 2);
         const height = Math.max(Math.floor(tileSize / 2), 2);
 
-        // Создаём через canvas + BaseTexture - это самый надёжный способ
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#' + color.toString(16).padStart(6, '0');
-        ctx.fillRect(0, 0, width, height);
+        // Создаём текстуру через PIXI.Graphics
+        const graphics = new PIXI.Graphics();
+        graphics.beginFill(color);
+        graphics.drawRect(0, 0, width, height);
+        graphics.endFill();
 
-        // Создаём BaseTexture и Texture
-        const baseTexture = new PIXI.BaseTexture(canvas);
-        const texture = new PIXI.Texture(baseTexture);
-
-        // Проверяем, что текстура имеет размеры
-        if (texture.width <= 0 || texture.height <= 0) {
-            // Если размеры не установились автоматически, создаём минимальную текстуру
-            const minCanvas = document.createElement('canvas');
-            minCanvas.width = 2;
-            minCanvas.height = 2;
-            const minCtx = minCanvas.getContext('2d');
-            minCtx.fillStyle = '#FF00FF';
-            minCtx.fillRect(0, 0, 2, 2);
-
-            return new PIXI.Texture(new PIXI.BaseTexture(minCanvas));
+        try {
+            const texture = this.app.renderer.generateTexture(graphics);
+            graphics.destroy();
+            
+            if (texture && texture.valid) {
+                return texture;
+            }
+        } catch (e) {
+            console.error('Ошибка создания fallback текстуры:', e);
         }
 
-        return texture;
+        // Если не удалось создать, возвращаем минимальную валидную текстуру
+        const minGraphics = new PIXI.Graphics();
+        minGraphics.beginFill(0xFF00FF);
+        minGraphics.drawRect(0, 0, 2, 2);
+        minGraphics.endFill();
+        
+        return this.app.renderer.generateTexture(minGraphics);
     }
 
     /**
@@ -1848,19 +1843,6 @@ class PIXIRenderer {
                 this.entityTextures.set('player', texture);
             }
 
-            // Гарантируем, что текстура валидна
-            if (!texture || !texture.valid) {
-                // Последняя попытка создать текстуру через canvas
-                const canvas = document.createElement('canvas');
-                canvas.width = 32;
-                canvas.height = 32;
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#4a9eff';
-                ctx.fillRect(0, 0, 32, 32);
-                texture = new PIXI.Texture(new PIXI.BaseTexture(canvas));
-                this.entityTextures.set('player', texture);
-            }
-
             characterSprite = new PIXI.Sprite(texture);
             // Устанавливаем точку привязки к нижнему центру (ноги персонажа)
             characterSprite.anchor.set(0.5, 1);
@@ -1910,23 +1892,6 @@ class PIXIRenderer {
                         enemy.type === 'fast' ? 0xffff00 :
                             enemy.type === 'tank' ? 0x8b0000 : 0xff4a4a;
                 texture = this.createFallbackTexture(32, fallbackColor);
-                this.entityTextures.set(textureKey, texture);
-            }
-
-            // Гарантируем, что текстура валидна
-            if (!texture || !texture.valid) {
-                // Последняя попытка создать текстуру через canvas
-                const fallbackColor = enemy.type === 'weak' ? 0xa0a0a0 :
-                    enemy.type === 'strong' ? 0xff6600 :
-                        enemy.type === 'fast' ? 0xffff00 :
-                            enemy.type === 'tank' ? 0x8b0000 : 0xff4a4a;
-                const canvas = document.createElement('canvas');
-                canvas.width = 32;
-                canvas.height = 32;
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#' + fallbackColor.toString(16).padStart(6, '0');
-                ctx.fillRect(0, 0, 32, 32);
-                texture = new PIXI.Texture(new PIXI.BaseTexture(canvas));
                 this.entityTextures.set(textureKey, texture);
             }
 
@@ -2648,28 +2613,23 @@ class PIXIRenderer {
             return this.flashTextureCache;
         }
 
-        // Создаём canvas для рисования круглой вспышки с градиентом
-        const canvas = document.createElement('canvas');
-        const size = 64;
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d');
-
+        // Создаём текстуру через PIXI.Graphics с градиентом
+        const graphics = new PIXI.Graphics();
+        
         // Рисуем круг с радиальным градиентом (от центра к краям)
-        const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-        gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-        gradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.8)');
-        gradient.addColorStop(0.6, 'rgba(255, 255, 255, 0.3)');
-        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        const gradientStops = [
+            { offset: 0, color: 0xFFFFFF, alpha: 1 },
+            { offset: 0.3, color: 0xFFFFFF, alpha: 0.8 },
+            { offset: 0.6, color: 0xFFFFFF, alpha: 0.3 },
+            { offset: 1, color: 0xFFFFFF, alpha: 0 }
+        ];
+        
+        graphics.beginGradientFill({ type: 'radial-gradient' }, gradientStops);
+        graphics.drawCircle(32, 32, 32);
+        graphics.endFill();
 
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Создаём текстуру из canvas
-        const baseTexture = new PIXI.BaseTexture(canvas);
-        const texture = new PIXI.Texture(baseTexture);
+        const texture = this.app.renderer.generateTexture(graphics);
+        graphics.destroy();
 
         this.flashTextureCache = texture;
         return texture;
