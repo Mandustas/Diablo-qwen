@@ -13,15 +13,17 @@ class UISkillBar extends UIComponent {
         // Размеры
         this.slotSize = 50;
         this.slotGap = 5;
-        this.orbSize = 60;
-        this.orbRadius = 26;
-        this.orbCircumference = 2 * Math.PI * this.orbRadius;
+        this.orbSize = 120;
 
         // Ссылка на игру
         this.game = null;
 
         // Позиционирование внизу экрана
         this.config.positionKey = 'skillBar';
+
+        // Орбы ресурсов
+        this.healthOrb = null;
+        this.manaOrb = null;
     }
 
     /**
@@ -32,120 +34,42 @@ class UISkillBar extends UIComponent {
         const totalSlotsWidth = 9 * this.slotSize + 8 * this.slotGap;
         const barPadding = 8;
         this.width = totalSlotsWidth + barPadding * 2 + this.orbSize * 2 + 20;
-        this.height = this.orbSize + 25; // + место для полоски опыта
+        this.height = this.orbSize + 35; // + место для полоски опыта
 
-        // Создаем контейнер для орбов и слотов
-        this.orbsContainer = new PIXI.Container();
-        this.container.addChild(this.orbsContainer);
-
+        // Создаем контейнер для слотов
         this.slotsContainer = new PIXI.Container();
         this.container.addChild(this.slotsContainer);
 
+        // Создаем орбы здоровья и маны как отдельные компоненты
+        this.createResourceOrbs();
+
         // Создаем основные элементы
-        this.createHealthManaOrbs();
         this.createSkillSlots();
         this.createExperienceBar();
 
         // Обновляем отображение
-        this.updateHealthManaDisplay();
         this.updateExperienceBar();
     }
 
     /**
      * Создание орбов здоровья и маны
      */
-    createHealthManaOrbs() {
+    createResourceOrbs() {
         // Орб здоровья (слева)
-        this.healthOrbContainer = new PIXI.Container();
-        this.healthOrbContainer.x = 0;
-        this.healthOrbContainer.y = (this.orbSize - 60) / 2;
-        this.orbsContainer.addChild(this.healthOrbContainer);
-
-        // Фон орба здоровья
-        const healthBgGraphics = new PIXI.Graphics();
-        healthBgGraphics.lineStyle(4, 0x1a1a1a);
-        healthBgGraphics.drawCircle(30, 30, this.orbRadius);
-        this.healthOrbContainer.addChild(healthBgGraphics);
-
-        // Прогресс здоровья
-        this.healthProgress = new PIXI.Graphics();
-        this.healthOrbContainer.addChild(this.healthProgress);
-
-        // Текст здоровья
-        this.healthText = this.createText('', {
-            fontSize: 10,
-            color: '#ff0000',
-            bold: true
+        this.healthOrb = new UIResourceOrb(this.character, {
+            resourceType: 'health'
         });
-        this.healthText.anchor.set(0.5);
-        this.healthText.x = 30;
-        this.healthText.y = 30;
-        this.healthOrbContainer.addChild(this.healthText);
+        this.healthOrb.init(this.uiRenderer, this.container);
+        this.healthOrb.container.x = 0;
+        this.healthOrb.container.y = 23;
 
         // Орб маны (справа)
-        this.manaOrbContainer = new PIXI.Container();
-        this.manaOrbContainer.x = this.width - this.orbSize;
-        this.manaOrbContainer.y = (this.orbSize - 60) / 2;
-        this.orbsContainer.addChild(this.manaOrbContainer);
-
-        // Фон орба маны
-        const manaBgGraphics = new PIXI.Graphics();
-        manaBgGraphics.lineStyle(4, 0x1a1a1a);
-        manaBgGraphics.drawCircle(30, 30, this.orbRadius);
-        this.manaOrbContainer.addChild(manaBgGraphics);
-
-        // Прогресс маны
-        this.manaProgress = new PIXI.Graphics();
-        this.manaOrbContainer.addChild(this.manaProgress);
-
-        // Текст маны
-        this.manaText = this.createText('', {
-            fontSize: 10,
-            color: '#0000ff',
-            bold: true
+        this.manaOrb = new UIResourceOrb(this.character, {
+            resourceType: 'mana'
         });
-        this.manaText.anchor.set(0.5);
-        this.manaText.x = 30;
-        this.manaText.y = 30;
-        this.manaOrbContainer.addChild(this.manaText);
-    }
-
-    /**
-     * Отрисовка кругового прогресса
-     */
-    renderCircularProgress(graphics, value, fillColor, isLow = false) {
-        graphics.clear();
-
-        const centerX = 30;
-        const centerY = 30;
-        const borderWidth = 4;
-
-        if (value <= 0) return;
-
-        // Цвет с эффектом при низком здоровье
-        const color = isLow ? 0xff3333 : fillColor;
-
-        // Рисуем дугу
-        const startAngle = -Math.PI / 2;
-        const endAngle = startAngle + 2 * Math.PI * value;
-
-        graphics.lineStyle(borderWidth, color);
-
-        const points = [];
-        const steps = Math.max(1, Math.floor(this.orbCircumference / 2));
-
-        for (let i = 0; i <= steps; i++) {
-            const angle = startAngle + (endAngle - startAngle) * (i / steps);
-            points.push(centerX + Math.cos(angle) * this.orbRadius);
-            points.push(centerY + Math.sin(angle) * this.orbRadius);
-        }
-
-        if (points.length >= 4) {
-            graphics.moveTo(points[0], points[1]);
-            for (let i = 2; i < points.length; i += 2) {
-                graphics.lineTo(points[i], points[i + 1]);
-            }
-        }
+        this.manaOrb.init(this.uiRenderer, this.container);
+        this.manaOrb.container.x = this.width - this.orbSize;
+        this.manaOrb.container.y = 23;
     }
 
     /**
@@ -155,8 +79,8 @@ class UISkillBar extends UIComponent {
         const barPadding = 8;
         const totalSlotsWidth = 9 * this.slotSize + 8 * this.slotGap;
 
-        const startX = this.orbSize + 10;
-        const startY = (this.orbSize - this.slotSize) / 2;
+        const startX = this.orbSize + barPadding * 2;
+        const startY = (this.orbSize - this.slotSize) / 1.2;
 
         this.slotsContainer.x = startX;
         this.slotsContainer.y = startY;
@@ -287,10 +211,10 @@ class UISkillBar extends UIComponent {
         const barPadding = 8;
         const totalSlotsWidth = 9 * this.slotSize + 8 * this.slotGap;
         const barWidth = totalSlotsWidth + barPadding * 2;
-        const barHeight = 16;
+        const barHeight = 20;
 
-        const startX = this.orbSize + 10;
-        const startY = this.orbSize + 5;
+        const startX = this.orbSize + 9;
+        const startY = this.orbSize;
 
         // Контейнер для полоски опыта
         this.expBarContainer = new PIXI.Container();
@@ -312,7 +236,7 @@ class UISkillBar extends UIComponent {
 
         // Текст опыта
         this.expText = this.createText('', {
-            fontSize: 10,
+            fontSize: 12,
             color: '#c9b896'
         });
         this.expText.anchor.set(0.5);
@@ -322,37 +246,22 @@ class UISkillBar extends UIComponent {
     }
 
     /**
-     * Обновление отображения здоровья и маны
+     * Обновление компонента
      */
-    updateHealthManaDisplay() {
-        if (!this.character) return;
+    onUpdate(deltaTime) {
+        // Обновляем орбы
+        if (this.healthOrb) {
+            this.healthOrb.updateDisplay();
+        }
+        if (this.manaOrb) {
+            this.manaOrb.updateDisplay();
+        }
 
-        // Здоровье
-        const healthPercent = this.character.health / this.character.maxHealth;
-        const isHealthLow = healthPercent < 0.3;
+        this.updateExperienceBar();
 
-        this.renderCircularProgress(
-            this.healthProgress,
-            healthPercent,
-            0xff0000,
-            isHealthLow
-        );
-
-        // Текст здоровья
-        this.healthText.text = `${this.character.health}/${this.character.maxHealth}`;
-        this.healthText.style.fill = isHealthLow ? '#ff3333' : '#ff0000';
-
-        // Мана
-        const manaPercent = this.character.mana / this.character.maxMana;
-
-        this.renderCircularProgress(
-            this.manaProgress,
-            manaPercent,
-            0x0000ff
-        );
-
-        // Текст маны
-        this.manaText.text = `${Math.floor(this.character.mana)}/${this.character.maxMana}`;
+        for (let i = 1; i <= 9; i++) {
+            this.updateSlotDisplay(i);
+        }
     }
 
     /**
@@ -366,7 +275,7 @@ class UISkillBar extends UIComponent {
             : 0;
 
         const barWidth = 9 * this.slotSize + 8 * this.slotGap + 16;
-        const barHeight = 16;
+        const barHeight = 20;
 
         // Очищаем и перерисовываем заполнение
         this.expBarFill.clear();
@@ -554,25 +463,6 @@ class UISkillBar extends UIComponent {
     }
 
     /**
-     * Обновление компонента
-     */
-    onUpdate(deltaTime) {
-        this.updateHealthManaDisplay();
-        this.updateExperienceBar();
-
-        for (let i = 1; i <= 9; i++) {
-            this.updateSlotDisplay(i);
-        }
-    }
-
-    /**
-     * Публичный метод обновления
-     */
-    update() {
-        this.onUpdate(16.67);
-    }
-
-    /**
      * Обработка горячих клавиш
      */
     handleHotkey(key) {
@@ -591,8 +481,8 @@ class UISkillBar extends UIComponent {
         // Фон для центральной панели с навыками
         const barPadding = 8;
         const totalSlotsWidth = 9 * this.slotSize + 8 * this.slotGap;
-        const panelX = this.orbSize + 10;
-        const panelY = (this.orbSize - this.slotSize) / 2 - barPadding;
+        const panelX = this.orbSize + barPadding;
+        const panelY = (this.orbSize - this.slotSize) / 1.3 - barPadding / 2;
         const panelWidth = totalSlotsWidth + barPadding * 2;
         const panelHeight = this.slotSize + barPadding * 2;
 
@@ -613,42 +503,6 @@ class UISkillBar extends UIComponent {
         // Рамка центральной панели
         this.graphics.lineStyle(2, 0x3a2a1a);
         this.graphics.drawRoundedRect(panelX, panelY, panelWidth, panelHeight, 3);
-
-        // Декоративные уголки на орбах
-        this.drawOrbDecorations();
-    }
-
-    /**
-     * Отрисовка декоративных элементов на орбах
-     */
-    drawOrbDecorations() {
-        const cornerSize = 6;
-
-        // Левый орб (здоровье)
-        this.graphics.lineStyle(2, 0x6a5a4a);
-
-        // Верхний левый угол
-        this.graphics.moveTo(5, 5 + cornerSize);
-        this.graphics.lineTo(5, 5);
-        this.graphics.lineTo(5 + cornerSize, 5);
-
-        // Нижний левый угол
-        this.graphics.moveTo(5, this.orbSize - 5 - cornerSize);
-        this.graphics.lineTo(5, this.orbSize - 5);
-        this.graphics.lineTo(5 + cornerSize, this.orbSize - 5);
-
-        // Правый орб (мана)
-        const orbX = this.width - this.orbSize;
-
-        // Верхний правый угол
-        this.graphics.moveTo(orbX + this.orbSize - 5 - cornerSize, 5);
-        this.graphics.lineTo(orbX + this.orbSize - 5, 5);
-        this.graphics.lineTo(orbX + this.orbSize - 5, 5 + cornerSize);
-
-        // Нижний правый угол
-        this.graphics.moveTo(orbX + this.orbSize - 5 - cornerSize, this.orbSize - 5);
-        this.graphics.lineTo(orbX + this.orbSize - 5, this.orbSize - 5);
-        this.graphics.lineTo(orbX + this.orbSize - 5, this.orbSize - 5 - cornerSize);
     }
 
     /**

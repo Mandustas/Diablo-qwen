@@ -28,14 +28,6 @@ class Game {
 
         // Управление
         this.keys = {};
-        
-        // Создаем дерево навыков (старая система, для обратной совместимости)
-        this.skillTree = new SkillTree(this.character);
-
-        // Создаем панель навыков (старая система, для обратной совместимости)
-        this.skillBar = new SkillBar(this.character);
-        this.skillBar.setGame(this);
-
         // Создаем окна инвентаря и характеристик (старая система, для обратной совместимости)
         this.inventoryWindow = new InventoryWindow(this.character);
         this.statsWindow = new StatsWindow(this.character);
@@ -129,7 +121,13 @@ class Game {
                 e.preventDefault();
                 // Используем новую систему UI
                 if (this.uiManager) {
-                    this.uiManager.toggle('pauseMenu');
+                    // Если есть открытые окна, закрываем их
+                    if (this.uiManager.hasOpenWindows()) {
+                        this.uiManager.closeAllWindows();
+                    } else {
+                        // Иначе переключаем меню паузы
+                        this.uiManager.toggle('pauseMenu');
+                    }
                 }
                 return;
             }
@@ -385,8 +383,8 @@ class Game {
                             const nearestPickedUp = this.itemDropSystem.tryPickupNearest(this.character);
 
                             if (!nearestPickedUp) {
-                                // Если и ближайший не подобрали, перемещаем персонажа к точке клика
-                                this.moveTo(worldX, worldY);
+                                // Если и ближайший не подобрали, ничего не делаем
+                                // this.moveTo(worldX, worldY); // Убрано перемещение по ЛКМ
                             } else {
                                 console.log('Подобран ближайший предмет по клику');
                             }
@@ -404,8 +402,8 @@ class Game {
                         const nearestPickedUp = this.itemDropSystem.tryPickupNearest(this.character);
 
                         if (!nearestPickedUp) {
-                            // Если и ближайший не подобрали, перемещаем персонажа к точке клика
-                            this.moveTo(worldX, worldY);
+                            // Если и ближайший не подобрали, ничего не делаем
+                            // this.moveTo(worldX, worldY); // Убрано перемещение по ЛКМ
                         } else {
                             console.log('Подобран ближайший предмет по клику');
                         }
@@ -413,10 +411,8 @@ class Game {
                         console.log('Подобран предмет по точным координатам клика');
                     }
                 }
-            } else {
-                // Перемещаем персонажа к точке клика
-                this.moveTo(worldX, worldY);
             }
+            // Перемещение по правой кнопке мыши убрано
         }
     }
 
@@ -916,11 +912,6 @@ class Game {
      * Обновление UI при изменении характеристик персонажа
      */
     updateCharacterUI() {
-        // Обновляем отображение характеристик
-        document.getElementById('healthValue').textContent = this.character.health;
-        document.getElementById('manaValue').textContent = Math.floor(this.character.mana);
-        document.getElementById('levelValue').textContent = this.character.level;
-
         // Обновляем координаты персонажа
         document.getElementById('coordX').textContent = Math.floor(this.character.x);
         document.getElementById('coordY').textContent = Math.floor(this.character.y);
@@ -930,12 +921,6 @@ class Game {
         document.getElementById('tileX').textContent = tilePos.tileX;
         document.getElementById('tileY').textContent = tilePos.tileY;
 
-        // Обновляем дерево навыков (старая система), если оно открыто
-        this.skillTree.onCharacterUpdate();
-
-        // Обновляем панель навыков (старая система)
-        this.skillBar.update();
-        
         // === НОВАЯ СИСТЕМА UI НА PIXI ===
         // Обновляем новые UI компоненты через UIManager
         if (this.uiManager) {

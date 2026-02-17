@@ -278,7 +278,33 @@ class UIManager {
             }
         }
     }
-    
+
+    /**
+     * Проверка наличия открытых окон (кроме постоянных панелей)
+     * @returns {boolean} - есть ли открытые окна
+     */
+    hasOpenWindows() {
+        const excludeKeys = ['panelButtons', 'skillBar', 'minimap'];
+        for (const component of this.components.values()) {
+            if (component.isOpen && !excludeKeys.includes(component.config.positionKey)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Закрыть все окна (кроме постоянных панелей)
+     */
+    closeAllWindows() {
+        const excludeKeys = ['panelButtons', 'skillBar', 'minimap'];
+        for (const component of this.components.values()) {
+            if (component.isOpen && !excludeKeys.includes(component.config.positionKey)) {
+                component.close();
+            }
+        }
+    }
+
     /**
      * Показ тултипа
      * @param {string} title - заголовок
