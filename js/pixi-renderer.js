@@ -169,6 +169,9 @@ class PIXIRenderer {
 
         // Кэш для текстур вспышек
         this.flashTextureCache = null;
+
+        // Система освещения (инициализируется извне)
+        this.lightingSystem = null;
     }
 
     /**
@@ -1492,6 +1495,11 @@ class PIXIRenderer {
                 sprite.x = pos.x;
                 sprite.y = pos.y;
 
+                // Применяем освещение к спрайту, если система освещения активна
+                if (this.lightingSystem) {
+                    this.lightingSystem.applyLightingToSprite(sprite, globalX, globalY, tileType);
+                }
+
                 chunkContainer.addChild(sprite);
                 spriteCount++;
             }
@@ -1503,6 +1511,28 @@ class PIXIRenderer {
         }
 
         return chunkContainer;
+    }
+
+    /**
+     * Установка системы освещения
+     * @param {LightingSystem} lightingSystem - система освещения
+     */
+    setLightingSystem(lightingSystem) {
+        this.lightingSystem = lightingSystem;
+        
+        // Очищаем кэш чанков, чтобы пересоздать их с освещением
+        this.chunkCache.clear();
+    }
+
+    /**
+     * Обновление освещения для всех чанков в кэше
+     * Вызывается при изменении позиции источника света
+     */
+    updateLightingForAllChunks() {
+        if (!this.lightingSystem) return;
+
+        // Очищаем кэш чанков для пересоздания с новым освещением
+        this.chunkCache.clear();
     }
 
     /**

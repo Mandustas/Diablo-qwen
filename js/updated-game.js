@@ -71,6 +71,10 @@ class Game {
         // Инициализируем систему полосок здоровья для врагов
         this.renderer.initEnemyHealthBars();
 
+        // Инициализируем систему освещения
+        this.lightingSystem = new LightingSystem(GAME_CONFIG.LIGHTING);
+        this.renderer.setLightingSystem(this.lightingSystem);
+
         // Переменная для отслеживания подсвеченного предмета
         this.hoveredItemDrop = null;
 
@@ -832,6 +836,11 @@ class Game {
 
         // Центрируем камеру на персонаже
         this.renderer.centerCameraOnCharacter(this.character);
+
+        // Обновляем позицию источника света (следует за персонажем)
+        if (this.lightingSystem) {
+            this.lightingSystem.setLightSource(this.character.x, this.character.y);
+        }
 
         // Загружаем новые чанки только при переходе в новый чанк
         const currentTilePos = getTileIndex(this.character.x, this.character.y);
