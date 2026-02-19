@@ -122,6 +122,59 @@ class ItemTooltip extends PIXI.Container {
         // Позиционируем относительно предмета
         this.updatePosition(drop);
     }
+
+    /**
+     * Показ подсказки для предмета (напрямую из объекта Item)
+     * @param {Item} item - предмет для отображения
+     */
+    showForItem(item) {
+        if (!item) {
+            this.hide();
+            return;
+        }
+        
+        this.currentItem = item;
+        this.visible = true;
+        
+        // Обновляем содержимое
+        this.updateContent();
+    }
+
+    /**
+     * Позиционирование тултипа в заданных экранных координатах
+     * @param {number} x - экранная координата X
+     * @param {number} y - экранная координата Y
+     */
+    positionAt(x, y) {
+        if (!this.pixiRenderer || !this.pixiRenderer.app) {
+            // Если нет рендерера, просто устанавливаем позицию
+            this.x = x + 15;
+            this.y = y - this.tooltipHeight / 2;
+            return;
+        }
+
+        const tooltipWidth = this.tooltipWidth || this.minWidth;
+        const tooltipHeight = this.tooltipHeight || 100;
+
+        // Позиционируем справа от курсора
+        let posX = x + 15;
+        if (posX + tooltipWidth > this.pixiRenderer.app.screen.width) {
+            // Не помещается справа, ставим слева
+            posX = x - tooltipWidth - 15;
+        }
+
+        // Вертикальное позиционирование - по центру курсора
+        let posY = y - tooltipHeight / 2;
+        if (posY < 0) {
+            posY = 0;
+        }
+        if (posY + tooltipHeight > this.pixiRenderer.app.screen.height) {
+            posY = this.pixiRenderer.app.screen.height - tooltipHeight;
+        }
+
+        this.x = posX;
+        this.y = posY;
+    }
     
     /**
      * Скрытие подсказки

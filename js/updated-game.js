@@ -537,7 +537,10 @@ class Game {
             this.itemTooltip.show(hoveredDrop);
             this.renderer.app.view.style.cursor = 'pointer'; // Меняем курсор на указатель при наведении на предмет
         } else {
-            this.itemTooltip.hide();
+            // Скрываем тултип только если он не показывается из лога действий
+            if (!this.itemTooltip.locked) {
+                this.itemTooltip.hide();
+            }
             this.renderer.app.view.style.cursor = 'default'; // Возвращаем стандартный курсор
         }
     }
@@ -1226,6 +1229,27 @@ class Game {
      * @param {WheelEvent} e - событие колеса мыши
      */
     handleZoom(e) {
+        // Проверяем, находится ли курсор над UI элементами
+        // Получаем позицию курсора
+        const rect = this.renderer.app.view.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // Проверяем, находится ли курсор над логом действий
+        if (this.uiActionLog && this.uiActionLog.container) {
+            const logContainer = this.uiActionLog.container;
+            const logBounds = logContainer.getBounds();
+            
+            if (logBounds && 
+                mouseX >= logBounds.x && 
+                mouseX <= logBounds.x + logBounds.width &&
+                mouseY >= logBounds.y && 
+                mouseY <= logBounds.y + logBounds.height) {
+                // Курсор над логом - не зумим
+                return;
+            }
+        }
+
         // Получаем направление прокрутки
         const zoomDelta = e.deltaY > 0 ? -GAME_CONFIG.CAMERA.ZOOM_DELTA_ON_WHEEL : GAME_CONFIG.CAMERA.ZOOM_DELTA_ON_WHEEL;
 

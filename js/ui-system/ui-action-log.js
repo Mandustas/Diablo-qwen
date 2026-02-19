@@ -69,6 +69,10 @@ class UIActionLog extends UIComponent {
         this.scrollbarDragStartY = 0;
         this.scrollbarDragStartOffset = 0;
         this.isHoveredScrollbar = false;
+
+        // Тултип для предметов
+        this.itemTooltip = null;
+        this.hoveredItem = null;
     }
 
     /**
@@ -79,6 +83,11 @@ class UIActionLog extends UIComponent {
         this.messagesContainer = new PIXI.Container();
         this.messagesContainer.x = this.padding;
         this.messagesContainer.y = this.headerHeight + this.padding;
+        // Включаем интерактивность для контейнера сообщений, чтобы события доходили до дочерних элементов
+        this.messagesContainer.eventMode = 'static';
+        this.messagesContainer.interactiveChildren = true;
+        
+        
         this.container.addChild(this.messagesContainer);
 
         // Создаем маску для обрезки содержимого
@@ -98,10 +107,11 @@ class UIActionLog extends UIComponent {
      * Создание маски для содержимого
      */
     createContentMask() {
-        const maskGraphics = new PIXI.Graphics();
         const contentWidth = this.width - this.scrollbarWidth - this.padding * 1.5;
         const contentHeight = this.height - this.headerHeight - this.padding * 2;
 
+        // Создаем маску
+        const maskGraphics = new PIXI.Graphics();
         maskGraphics.beginFill(0xFFFFFF);
         maskGraphics.drawRect(0, 0, contentWidth, contentHeight);
         maskGraphics.endFill();
@@ -111,15 +121,27 @@ class UIActionLog extends UIComponent {
         this.container.addChild(maskGraphics);
         this.messagesContainer.mask = maskGraphics;
         this.contentMask = maskGraphics;
+        
+        // Сохраняем размеры области контента
+        this.contentWidth = contentWidth;
+        this.contentHeight = contentHeight;
+        
+        // НЕ устанавливаем hitArea - пусть PIXI использует bounds дочерних элементов
+        // hitArea может блокировать события для дочерних элементов
     }
 
     /**
      * Настройка интерактивности
      */
     setupInteractions() {
-        // Интерактивность для колеса мыши
+        // Интерактивность для колеса мыши и pointer events
         this.container.eventMode = 'static';
-        this.container.on('wheel', (e) => this.handleWheel(e));
+        this.container.interactiveChildren = true;
+        this.container.on('wheel', (e) => {
+            // Останавливаем всплытие, чтобы зум карты не срабатывал
+            e.stopPropagation();
+            this.handleWheel(e);
+        });
 
         // Интерактивность для скроллбара
         this.scrollbarGraphics.eventMode = 'static';
@@ -259,10 +281,8 @@ class UIActionLog extends UIComponent {
             this.messages.pop();
         }
 
-        // Если автопрокрутка включена, прокручиваем к новым сообщениям
-        if (this.isAutoScroll) {
-            this.scrollToNewest();
-        }
+        // Всегда прокручиваем к новым сообщениям при добавлении
+        this.scrollToNewest();
 
         this.needsMessageRender = true;
         this.markForUpdate();
@@ -580,7 +600,8 @@ class UIActionLog extends UIComponent {
 
     /**
      * Создание составного текста для предмета
-     * Белый текст для "Время Получен предмет: " и цвет качества для названия
+     * Белый текст для "Время Получен предмет: " и цвет качества для названия в скобках
+     * При наведении на название показывается тултип
      */
     createItemMessageText(message, maxWidth) {
         const container = new PIXI.Container();
@@ -599,6 +620,7 @@ class UIActionLog extends UIComponent {
         const prefix = `${time} Получен предмет: `;
         const itemName = message.raw.name || 'Неизвестный предмет';
         const rarityColor = this.getRarityColor(message.raw.rarity);
+        const rarityColorHex = this.hexToDecimal(rarityColor);
 
         // Создаем текст префикса (белый)
         const prefixStyle = { ...baseStyle, fill: 0xffffff };
@@ -606,12 +628,53 @@ class UIActionLog extends UIComponent {
         prefixText.anchor.set(0, 0);
         container.addChild(prefixText);
 
+        // Создаем контейнер для названия предмета со скобками (интерактивный)
+        const itemContainer = new PIXI.Container();
+        itemContainer.x = prefixText.width;
+        
+        // Создаем открывающую скобку (цвет качества)
+        const bracketStyle = { ...baseStyle, fill: rarityColorHex };
+        const openBracket = new PIXI.Text('[', bracketStyle);
+        openBracket.anchor.set(0, 0);
+        itemContainer.addChild(openBracket);
+
         // Создаем текст названия предмета (цвет качества)
-        const nameStyle = { ...baseStyle, fill: this.hexToDecimal(rarityColor) };
+        const nameStyle = { ...baseStyle, fill: rarityColorHex };
         const nameText = new PIXI.Text(itemName, nameStyle);
         nameText.anchor.set(0, 0);
-        nameText.x = prefixText.width;
-        container.addChild(nameText);
+        nameText.x = openBracket.width;
+        itemContainer.addChild(nameText);
+
+        // Создаем закрывающую скобку (цвет качества)
+        const closeBracket = new PIXI.Text(']', bracketStyle);
+        closeBracket.anchor.set(0, 0);
+        closeBracket.x = openBracket.width + nameText.width;
+        itemContainer.addChild(closeBracket);
+
+        // Добавляем интерактивность для всего контейнера предмета
+        itemContainer.eventMode = 'static';
+        itemContainer.interactive = true;
+        itemContainer.interactiveChildren = true;
+        itemContainer.cursor = 'pointer';
+        
+        // Сохраняем ссылку на предмет в контейнере
+        itemContainer.itemData = message.raw;
+        
+        // PIXI автоматически использует bounds контейнера для hit testing
+        
+        itemContainer.on('pointerover', (e) => {
+            this.showItemTooltip(e, itemContainer.itemData);
+        });
+        
+        itemContainer.on('pointerout', () => {
+            this.hideItemTooltip();
+        });
+        
+        itemContainer.on('pointermove', (e) => {
+            this.updateTooltipPosition(e);
+        });
+        
+        container.addChild(itemContainer);
 
         // Проверяем, не превышает ли ширина
         const totalWidth = container.width;
@@ -619,10 +682,13 @@ class UIActionLog extends UIComponent {
             // Если слишком длинное, используем обычный текст с переносом
             container.destroy({ children: true });
             
+            // Текст со скобками для переноса
+            const itemTextWithBrackets = `[${itemName}]`;
+            
             const fullTextStyle = {
                 fontFamily: UIConfig.fonts.family,
                 fontSize: 11,
-                fill: this.hexToDecimal(rarityColor),
+                fill: rarityColorHex,
                 wordWrap: true,
                 wordWrapWidth: maxWidth,
                 dropShadow: true,
@@ -631,10 +697,58 @@ class UIActionLog extends UIComponent {
                 dropShadowDistance: 1
             };
             
-            return new PIXI.Text(message.text, fullTextStyle);
+            const wrappedText = new PIXI.Text(`${prefix}${itemTextWithBrackets}`, fullTextStyle);
+            // Добавляем интерактивность и для перенесенного текста
+            wrappedText.eventMode = 'static';
+            wrappedText.interactive = true;
+            wrappedText.cursor = 'pointer';
+            wrappedText.itemData = message.raw;
+            wrappedText.on('pointerover', (e) => this.showItemTooltip(e, wrappedText.itemData));
+            wrappedText.on('pointerout', () => this.hideItemTooltip());
+            wrappedText.on('pointermove', (e) => this.updateTooltipPosition(e));
+            
+            return wrappedText;
         }
 
         return container;
+    }
+
+    /**
+     * Показать тултип предмета
+     */
+    showItemTooltip(e, item) {
+        if (!item || !this.game || !this.game.itemTooltip) return;
+        
+        const tooltip = this.game.itemTooltip;
+        
+        this.hoveredItem = item;
+        tooltip.locked = true; // Блокируем тултип, чтобы game.js не скрывал его
+        tooltip.showForItem(item);
+        this.updateTooltipPosition(e);
+    }
+
+    /**
+     * Скрыть тултип предмета
+     */
+    hideItemTooltip() {
+        if (!this.game || !this.game.itemTooltip) return;
+        
+        this.hoveredItem = null;
+        this.game.itemTooltip.locked = false; // Снимаем блокировку
+        this.game.itemTooltip.hide();
+    }
+
+    /**
+     * Обновить позицию тултипа
+     */
+    updateTooltipPosition(e) {
+        if (!this.game || !this.game.itemTooltip || !this.hoveredItem) return;
+        
+        // Получаем глобальные координаты курсора
+        const globalPos = e.data.global;
+        
+        // Позиционируем тултип рядом с курсором
+        this.game.itemTooltip.positionAt(globalPos.x, globalPos.y);
     }
 
     /**
