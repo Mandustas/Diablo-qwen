@@ -1,11 +1,7 @@
 /**
  * TileBatchRenderer - система пакетного рендеринга тайлов
- * Оптимизация: один PIXI.Graphics на чанк вместо 256 отдельных спрайтов
- * 
- * Принцип работы:
- * - Каждый чанк рендерится в один Graphics объект
- * - Используются упрощённые текстуры из атласа
- * - Освещение применяется через tint на уровне Graphics
+ * Оптимизация: один PIXI.Mesh на чанк вместо 256 отдельных спрайтов
+ * Использует атлас текстур с UV-координатами
  */
 class TileBatchRenderer {
     constructor(renderer) {
@@ -14,9 +10,11 @@ class TileBatchRenderer {
         // Кэш батчей для чанков
         this.batchCache = new Map();
         
-        // Атлас текстур для тайлов
-        this.tileAtlas = null;
-        this.atlasTextures = new Map();
+        // Генератор атласа текстур
+        this.atlasGenerator = null;
+        
+        // Текстура атласа
+        this.atlasTexture = null;
         
         // Размер тайла
         this.tileSize = GAME_CONFIG.TILE.BASE_SIZE;
@@ -24,36 +22,36 @@ class TileBatchRenderer {
         // Размер чанка
         this.chunkSize = GAME_CONFIG.INITIAL_CHUNK_SIZE;
         
-        // Кэш цветов для типов тайлов (упрощённые цвета)
+        // Кэш цветов для типов тайлов
         this.tileColors = this.initTileColors();
         
-        // Флаг использования упрощённых текстур
-        this.useSimpleTextures = true;
+        // Флаг использования атласа
+        this.useAtlas = true;
         
         // Счётчик для отладки
         this.stats = {
             batchesRendered: 0,
             tilesRendered: 0,
             cacheHits: 0,
-            cacheMisses: 0
+            cacheMisses: 0,
+            drawCalls: 0
         };
     }
     
     /**
      * Инициализация цветов для типов тайлов
-     * Используем упрощённую палитру для batch rendering
      */
     initTileColors() {
         const colors = GAME_CONFIG.RENDERER.COLORS;
         return {
-            0: this.hexToNumber(colors.FLOOR),       // Пол
-            1: this.hexToNumber(colors.WALL),        // Стена
-            2: this.hexToNumber(colors.WALL_DARK),   // Колонна
-            3: this.hexToNumber(colors.TREE_LEAVES), // Дерево
-            4: this.hexToNumber(colors.ROCK),        // Скала
-            5: this.hexToNumber(colors.WATER),       // Вода
-            6: this.hexToNumber(colors.ICE),         // Лёд
-            7: this.hexToNumber(colors.DECORATION)   // Декорация
+            0: this.hexToNumber(colors.FLOOR),
+            1: this.hexToNumber(colors.WALL),
+            2: this.hexToNumber(colors.WALL_DARK),
+            3: this.hexToNumber(colors.TREE_LEAVES),
+            4: this.hexToNumber(colors.ROCK),
+            5: this.hexToNumber(colors.WATER),
+            6: this.hexToNumber(colors.ICE),
+            7: this.hexToNumber(colors.DECORATION)
         };
     }
     
@@ -69,298 +67,24 @@ class TileBatchRenderer {
     
     /**
      * Инициализация атласа текстур
-     * Создаёт простые текстуры для каждого типа тайла
      */
     initAtlas() {
-        if (this.tileAtlas) return;
+        if (this.atlasGenerator) return;
         
-        // Создаём атлас как большой Graphics
-        const atlasGraphics = new PIXI.Graphics();
-        const textureSize = this.tileSize;
-        const padding = 2;
-        const totalSize = textureSize + padding * 2;
+        // Создаём генератор атласа
+        this.atlasGenerator = new TileAtlasGenerator();
+        this.atlasGenerator.init(GAME_CONFIG.RENDERER.COLORS);
         
-        // Создаём текстуры для каждого типа тайла
-        for (let tileType = 0; tileType <= 7; tileType++) {
-            const x = (tileType % 4) * totalSize;
-            const y = Math.floor(tileType / 4) * totalSize;
-            
-            this.drawSimpleTile(atlasGraphics, x + padding, y + padding, textureSize, tileType);
-        }
+        // Создаём PIXI текстуру
+        this.atlasTexture = this.atlasGenerator.createTexture(this.renderer.app.renderer);
         
-        // Генерируем текстуру атласа
-        this.tileAtlas = this.renderer.app.renderer.generateTexture(atlasGraphics);
-        atlasGraphics.destroy();
-        
-        // Создаём регионы текстур для каждого типа тайла
-        for (let tileType = 0; tileType <= 7; tileType++) {
-            const x = (tileType % 4) * totalSize + padding;
-            const y = Math.floor(tileType / 4) * totalSize + padding;
-            
-            const frame = new PIXI.Rectangle(x, y, textureSize, textureSize);
-            const texture = new PIXI.Texture(this.tileAtlas, frame);
-            this.atlasTextures.set(tileType, texture);
-        }
+        console.log('[TileBatchRenderer] Атлас инициализирован:', this.atlasGenerator.getInfo());
     }
     
     /**
-     * Рисование упрощённого тайла
-     * Сохраняет визуальный стиль, но с меньшим количеством деталей
-     */
-    drawSimpleTile(graphics, x, y, size, tileType) {
-        const halfW = size / 2;
-        const halfH = size / 4;
-        const color = this.tileColors[tileType];
-        
-        switch (tileType) {
-            case 0: // Пол
-                this.drawIsometricTile(graphics, x, y, size, size / 2, color, 0x0a0806, 0.3);
-                break;
-            case 1: // Стена
-                this.drawIsometricTile3D(graphics, x, y, size, size / 2, color, 0x1a1512, 8);
-                break;
-            case 2: // Колонна
-                this.drawColumnTile(graphics, x, y, size, color);
-                break;
-            case 3: // Дерево
-                this.drawTreeTile(graphics, x, y, size, color);
-                break;
-            case 4: // Скала
-                this.drawRockTile(graphics, x, y, size, color);
-                break;
-            case 5: // Вода
-                this.drawWaterTile(graphics, x, y, size, color);
-                break;
-            case 6: // Лёд
-                this.drawIceTile(graphics, x, y, size, color);
-                break;
-            case 7: // Декорация
-                this.drawDecorationTile(graphics, x, y, size, color);
-                break;
-        }
-    }
-    
-    /**
-     * Рисование изометрического тайла (пол)
-     */
-    drawIsometricTile(graphics, x, y, width, height, color, darkColor, darkAlpha) {
-        const halfW = width / 2;
-        const halfH = height / 2;
-        
-        // Основной цвет
-        graphics.beginFill(color);
-        graphics.moveTo(x, y);
-        graphics.lineTo(x + halfW, y + halfH);
-        graphics.lineTo(x, y + height);
-        graphics.lineTo(x - halfW, y + halfH);
-        graphics.closePath();
-        graphics.endFill();
-        
-        // Затемнение к центру
-        if (darkColor) {
-            graphics.beginFill(darkColor, darkAlpha);
-            graphics.moveTo(x, y + halfH * 0.3);
-            graphics.lineTo(x + halfW * 0.6, y + halfH * 0.8);
-            graphics.lineTo(x, y + height * 0.8);
-            graphics.lineTo(x - halfW * 0.6, y + halfH * 0.8);
-            graphics.closePath();
-            graphics.endFill();
-        }
-    }
-    
-    /**
-     * Рисование 3D изометрического тайла (стена)
-     */
-    drawIsometricTile3D(graphics, x, y, width, height, color, darkColor, depth) {
-        const halfW = width / 2;
-        const halfH = height / 2;
-        
-        // Правая грань (темнее)
-        graphics.beginFill(darkColor, 0.8);
-        graphics.moveTo(x + halfW, y + halfH);
-        graphics.lineTo(x + halfW, y + halfH + depth);
-        graphics.lineTo(x, y + height + depth);
-        graphics.lineTo(x, y + height);
-        graphics.closePath();
-        graphics.endFill();
-        
-        // Левая грань (ещё темнее)
-        graphics.beginFill(darkColor, 0.6);
-        graphics.moveTo(x - halfW, y + halfH);
-        graphics.lineTo(x - halfW, y + halfH + depth);
-        graphics.lineTo(x, y + height + depth);
-        graphics.lineTo(x, y + height);
-        graphics.closePath();
-        graphics.endFill();
-        
-        // Верхняя грань
-        graphics.beginFill(color);
-        graphics.moveTo(x, y);
-        graphics.lineTo(x + halfW, y + halfH);
-        graphics.lineTo(x, y + height);
-        graphics.lineTo(x - halfW, y + halfH);
-        graphics.closePath();
-        graphics.endFill();
-        
-        // Текстура камня (упрощённая)
-        graphics.beginFill(darkColor, 0.3);
-        for (let i = 0; i < 4; i++) {
-            const px = x + (Math.random() - 0.5) * width * 0.5;
-            const py = y + halfH + (Math.random() - 0.5) * height * 0.3;
-            graphics.drawCircle(px, py, 2 + Math.random() * 3);
-        }
-        graphics.endFill();
-    }
-    
-    /**
-     * Рисование колонны
-     */
-    drawColumnTile(graphics, x, y, size, color) {
-        const halfW = size * 0.15;
-        const height = size * 0.6;
-        
-        // Тень
-        graphics.beginFill(0x0a0806, 0.4);
-        graphics.drawEllipse(x, y + size * 0.15, size * 0.2, size * 0.08);
-        graphics.endFill();
-        
-        // Тело колонны
-        graphics.beginFill(color);
-        graphics.moveTo(x - halfW, y - height * 0.3);
-        graphics.lineTo(x + halfW, y - height * 0.2);
-        graphics.lineTo(x + halfW * 0.8, y + size * 0.1);
-        graphics.lineTo(x - halfW * 0.8, y + size * 0.1);
-        graphics.closePath();
-        graphics.endFill();
-        
-        // Капитель
-        graphics.beginFill(this.tileColors[1]);
-        graphics.drawEllipse(x, y - height * 0.35, halfW * 1.5, halfW * 0.5);
-        graphics.endFill();
-    }
-    
-    /**
-     * Рисование дерева
-     */
-    drawTreeTile(graphics, x, y, size, color) {
-        const trunkColor = this.hexToNumber(GAME_CONFIG.RENDERER.COLORS.TREE_TRUNK);
-        
-        // Тень
-        graphics.beginFill(0x0a0806, 0.3);
-        graphics.drawEllipse(x, y + size * 0.1, size * 0.2, size * 0.08);
-        graphics.endFill();
-        
-        // Ствол
-        graphics.beginFill(trunkColor);
-        graphics.drawRect(x - size * 0.05, y - size * 0.15, size * 0.1, size * 0.25);
-        graphics.endFill();
-        
-        // Крона (несколько кругов)
-        graphics.beginFill(color, 0.9);
-        graphics.drawCircle(x, y - size * 0.25, size * 0.2);
-        graphics.drawCircle(x - size * 0.12, y - size * 0.18, size * 0.15);
-        graphics.drawCircle(x + size * 0.12, y - size * 0.18, size * 0.15);
-        graphics.endFill();
-    }
-    
-    /**
-     * Рисование скалы
-     */
-    drawRockTile(graphics, x, y, size, color) {
-        // Тень
-        graphics.beginFill(0x0a0806, 0.3);
-        graphics.drawEllipse(x, y + size * 0.1, size * 0.25, size * 0.1);
-        graphics.endFill();
-        
-        // Основная форма
-        graphics.beginFill(color);
-        graphics.moveTo(x - size * 0.25, y + size * 0.05);
-        graphics.lineTo(x - size * 0.15, y - size * 0.1);
-        graphics.lineTo(x, y - size * 0.15);
-        graphics.lineTo(x + size * 0.2, y - size * 0.05);
-        graphics.lineTo(x + size * 0.25, y + size * 0.08);
-        graphics.lineTo(x, y + size * 0.12);
-        graphics.closePath();
-        graphics.endFill();
-        
-        // Блики
-        graphics.beginFill(0x3d3028, 0.5);
-        graphics.drawCircle(x - size * 0.08, y - size * 0.05, size * 0.05);
-        graphics.endFill();
-    }
-    
-    /**
-     * Рисование воды
-     */
-    drawWaterTile(graphics, x, y, size, color) {
-        const halfW = size / 2;
-        const halfH = size / 4;
-        
-        // Основная вода
-        graphics.beginFill(color);
-        graphics.moveTo(x, y);
-        graphics.lineTo(x + halfW, y + halfH);
-        graphics.lineTo(x, y + size / 2);
-        graphics.lineTo(x - halfW, y + halfH);
-        graphics.closePath();
-        graphics.endFill();
-        
-        // Блики
-        graphics.beginFill(0x2a3f4f, 0.4);
-        graphics.drawEllipse(x, y + halfH, size * 0.15, size * 0.05);
-        graphics.endFill();
-    }
-    
-    /**
-     * Рисование льда
-     */
-    drawIceTile(graphics, x, y, size, color) {
-        const halfW = size / 2;
-        const halfH = size / 4;
-        
-        // Основной лёд
-        graphics.beginFill(color);
-        graphics.moveTo(x, y);
-        graphics.lineTo(x + halfW, y + halfH);
-        graphics.lineTo(x, y + size / 2);
-        graphics.lineTo(x - halfW, y + halfH);
-        graphics.closePath();
-        graphics.endFill();
-        
-        // Трещины
-        graphics.lineStyle(1, 0x3d4f55, 0.4);
-        graphics.moveTo(x - size * 0.15, y + halfH * 0.5);
-        graphics.lineTo(x + size * 0.1, y + halfH);
-        graphics.moveTo(x, y + halfH * 0.3);
-        graphics.lineTo(x + size * 0.1, y + halfH * 1.2);
-    }
-    
-    /**
-     * Рисование декорации
-     */
-    drawDecorationTile(graphics, x, y, size, color) {
-        // Тень
-        graphics.beginFill(0x0a0806, 0.3);
-        graphics.drawEllipse(x, y + size * 0.08, size * 0.12, size * 0.05);
-        graphics.endFill();
-        
-        // Трава/куст
-        graphics.beginFill(color, 0.8);
-        for (let i = 0; i < 5; i++) {
-            const gx = x + (Math.random() - 0.5) * size * 0.2;
-            const gy = y + size * 0.05;
-            const gh = size * (0.08 + Math.random() * 0.06);
-            graphics.moveTo(gx, gy);
-            graphics.lineTo(gx + 1, gy - gh);
-            graphics.lineTo(gx + 2, gy);
-        }
-        graphics.endFill();
-    }
-    
-    /**
-     * Создание батча для чанка
+     * Создание геометрии для чанка с UV-координатами
      * @param {Object} chunk - объект чанка
-     * @returns {PIXI.Graphics} - Graphics объект с отрисованным чанком
+     * @returns {PIXI.Mesh} - Mesh объект с отрисованным чанком
      */
     createChunkBatch(chunk) {
         const chunkKey = `${chunk.chunkX},${chunk.chunkY}`;
@@ -373,12 +97,65 @@ class TileBatchRenderer {
         
         this.stats.cacheMisses++;
         
-        // Создаём Graphics для чанка
-        const graphics = new PIXI.Graphics();
-        graphics.chunkKey = chunkKey;
+        // Создаём геометрию для чанка
+        const geometry = this.createChunkGeometry(chunk);
         
-        // Рисуем все тайлы чанка
-        let tilesDrawn = 0;
+        // Создаём материал (шейдер)
+        const shader = PIXI.Shader.from(`
+            attribute vec2 aVertexPosition;
+            attribute vec2 aTextureCoord;
+            attribute vec4 aColor;
+            
+            uniform mat3 projectionMatrix;
+            uniform mat3 worldTransform;
+            
+            varying vec2 vTextureCoord;
+            varying vec4 vColor;
+            
+            void main(void) {
+                vec2 worldPos = (worldTransform * vec3(aVertexPosition, 1.0)).xy;
+                gl_Position = vec4((projectionMatrix * vec3(worldPos, 1.0)).xy, 0.0, 1.0);
+                vTextureCoord = aTextureCoord;
+                vColor = aColor;
+            }
+        `, `
+            varying vec2 vTextureCoord;
+            varying vec4 vColor;
+            
+            uniform sampler2D uSampler;
+            
+            void main(void) {
+                vec4 texColor = texture2D(uSampler, vTextureCoord);
+                gl_FragColor = texColor * vColor;
+            }
+        `, {
+            uSampler: this.atlasTexture
+        });
+        
+        // Создаём Mesh
+        const mesh = new PIXI.Mesh(geometry, shader);
+        mesh.chunkKey = chunkKey;
+        
+        this.stats.tilesRendered += chunk.tiles.length * chunk.tiles[0].length;
+        
+        // Кэшируем батч
+        this.batchCache.set(chunkKey, mesh);
+        
+        return mesh;
+    }
+    
+    /**
+     * Создание геометрии для чанка
+     * @param {Object} chunk - объект чанка
+     * @returns {PIXI.Geometry} - геометрия с вершинами, UV и цветами
+     */
+    createChunkGeometry(chunk) {
+        const vertices = [];
+        const uvs = [];
+        const colors = [];
+        const indices = [];
+        
+        let vertexIndex = 0;
         
         for (let localY = 0; localY < chunk.tiles.length; localY++) {
             for (let localX = 0; localX < chunk.tiles[localY].length; localX++) {
@@ -391,60 +168,123 @@ class TileBatchRenderer {
                 // Преобразуем в экранные координаты
                 const pos = this.renderer.isoTo2D(globalX, globalY);
                 
-                // Рисуем тайл
-                this.drawSimpleTile(graphics, pos.x, pos.y, this.tileSize, tileType);
-                tilesDrawn++;
+                // Получаем UV-координаты для тайла
+                const variation = this.getTileVariation(globalX, globalY, tileType);
+                const uv = this.atlasGenerator.getTileUV(tileType, variation);
+                
+                // Создаём 4 вершины для изометрического тайла (ромб)
+                const halfW = this.tileSize / 2;
+                const halfH = this.tileSize / 4;
+                
+                // Вершины ромба (по часовой стрелке с верхней точки)
+                // Верхняя вершина
+                vertices.push(pos.x, pos.y - halfH);
+                // Правая вершина
+                vertices.push(pos.x + halfW, pos.y);
+                // Нижняя вершина
+                vertices.push(pos.x, pos.y + halfH);
+                // Левая вершина
+                vertices.push(pos.x - halfW, pos.y);
+                
+                // UV-координаты для ромба
+                // Центр верхней грани
+                uvs.push((uv.u0 + uv.u1) / 2, uv.v0);
+                // Правый край
+                uvs.push(uv.u1, (uv.v0 + uv.v1) / 2);
+                // Центр нижней грани
+                uvs.push((uv.u0 + uv.u1) / 2, uv.v1);
+                // Левый край
+                uvs.push(uv.u0, (uv.v0 + uv.v1) / 2);
+                
+                // Цвет вершины (белый по умолчанию, будет модифицироваться освещением)
+                const color = 0xFFFFFFFF; // RGBA как float
+                for (let i = 0; i < 4; i++) {
+                    colors.push(1, 1, 1, 1); // RGBA
+                }
+                
+                // Индексы для двух треугольников
+                indices.push(
+                    vertexIndex, vertexIndex + 1, vertexIndex + 2,
+                    vertexIndex, vertexIndex + 2, vertexIndex + 3
+                );
+                
+                vertexIndex += 4;
             }
         }
         
-        this.stats.tilesRendered += tilesDrawn;
+        // Создаём геометрию
+        const geometry = new PIXI.Geometry();
+        geometry.addAttribute('aVertexPosition', new Float32Array(vertices), 2);
+        geometry.addAttribute('aTextureCoord', new Float32Array(uvs), 2);
+        geometry.addAttribute('aColor', new Float32Array(colors), 4);
+        geometry.addIndex(new Uint16Array(indices));
         
-        // Кэшируем батч
-        this.batchCache.set(chunkKey, graphics);
-        
-        return graphics;
+        return geometry;
+    }
+    
+    /**
+     * Получение вариации тайла на основе позиции (детерминированно)
+     */
+    getTileVariation(x, y, tileType) {
+        // Используем координаты для детерминированного выбора вариации
+        const hash = (x * 374761393 + y * 668265263) >>> 0;
+        const variations = this.atlasGenerator.variations[tileType] || 1;
+        return hash % variations;
     }
     
     /**
      * Получение или создание батча для чанка
-     * @param {Object} chunk - объект чанка
-     * @returns {PIXI.Graphics} - Graphics объект
      */
     getChunkBatch(chunk) {
         return this.createChunkBatch(chunk);
     }
     
     /**
-     * Обновление освещения для батча чанка
-     * @param {PIXI.Graphics} batch - батч чанка
+     * Обновление освещения для батча чанка через vertex colors
+     * @param {PIXI.Mesh} batch - батч чанка
      * @param {LightingSystem} lightingSystem - система освещения
      * @param {number} playerX - X координата игрока
      * @param {number} playerY - Y координата игрока
      */
     updateBatchLighting(batch, lightingSystem, playerX, playerY) {
-        if (!lightingSystem || !batch.chunkKey) return;
+        if (!lightingSystem || !batch.chunkKey || !batch.geometry) return;
         
-        // Вычисляем среднюю освещённость для чанка
-        const [chunkX, chunkY] = batch.chunkKey.split(',').map(Number);
-        const centerX = (chunkX + 0.5) * this.chunkSize;
-        const centerY = (chunkY + 0.5) * this.chunkSize;
-        const pos = this.renderer.isoTo2D(centerX, centerY);
+        const colorsAttribute = batch.geometry.getAttribute('aColor');
+        if (!colorsAttribute) return;
         
-        // Получаем освещённость для центра чанка
-        const intensity = lightingSystem.getLightingAtPosition(pos.x, pos.y);
+        const colors = colorsAttribute.data;
+        const chunkKey = batch.chunkKey;
+        const [chunkX, chunkY] = chunkKey.split(',').map(Number);
         
-        // Применяем tint ко всему батчу
-        // Вычисляем цвет tint на основе интенсивности
-        const brightness = Math.max(0.2, intensity);
-        const r = Math.floor(255 * brightness);
-        const g = Math.floor(255 * brightness);
-        const b = Math.floor(255 * brightness);
-        batch.tint = (r << 16) + (g << 8) + b;
+        // Обновляем цвет для каждой вершины
+        let colorIndex = 0;
+        
+        for (let localY = 0; localY < this.chunkSize; localY++) {
+            for (let localX = 0; localX < this.chunkSize; localX++) {
+                const globalX = chunkX * this.chunkSize + localX;
+                const globalY = chunkY * this.chunkSize + localY;
+                const pos = this.renderer.isoTo2D(globalX, globalY);
+                
+                // Получаем освещённость
+                const intensity = lightingSystem.getLightingAtPosition(pos.x, pos.y);
+                const brightness = Math.max(0.2, Math.min(1, intensity));
+                
+                // Применяем ко всем 4 вершинам тайла
+                for (let v = 0; v < 4; v++) {
+                    colors[colorIndex++] = brightness;     // R
+                    colors[colorIndex++] = brightness;     // G
+                    colors[colorIndex++] = brightness;     // B
+                    colors[colorIndex++] = 1;              // A
+                }
+            }
+        }
+        
+        // Обновляем буфер
+        colorsAttribute.update();
     }
     
     /**
      * Удаление батча чанка из кэша
-     * @param {string} chunkKey - ключ чанка
      */
     removeChunkBatch(chunkKey) {
         const batch = this.batchCache.get(chunkKey);
@@ -456,9 +296,6 @@ class TileBatchRenderer {
     
     /**
      * Очистка кэша батчей, которые далеко от игрока
-     * @param {number} playerChunkX - X координата чанка игрока
-     * @param {number} playerChunkY - Y координата чанка игрока
-     * @param {number} maxDistance - максимальное расстояние в чанках
      */
     cleanupDistantBatches(playerChunkX, playerChunkY, maxDistance = 10) {
         for (const [key, batch] of this.batchCache.entries()) {
@@ -483,7 +320,8 @@ class TileBatchRenderer {
             batchesRendered: 0,
             tilesRendered: 0,
             cacheHits: 0,
-            cacheMisses: 0
+            cacheMisses: 0,
+            drawCalls: 0
         };
     }
     
@@ -504,27 +342,25 @@ class TileBatchRenderer {
             
             const batch = this.getChunkBatch(chunk);
             
-            // Добавляем в контейнер если ещё не добавлен
-            if (!batch.parent) {
-                container.addChild(batch);
-            }
-            
+            // Добавляем в контейнер
+            container.addChild(batch);
             batchesRendered++;
         }
         
         this.stats.batchesRendered = batchesRendered;
+        this.stats.drawCalls = batchesRendered; // Один draw call на чанк
         
         return batchesRendered;
     }
     
     /**
      * Получение статистики рендеринга
-     * @returns {Object} - статистика
      */
     getStats() {
         return {
             ...this.stats,
-            cacheSize: this.batchCache.size
+            cacheSize: this.batchCache.size,
+            atlasInfo: this.atlasGenerator ? this.atlasGenerator.getInfo() : null
         };
     }
     
@@ -534,11 +370,14 @@ class TileBatchRenderer {
     destroy() {
         this.clearCache();
         
-        if (this.tileAtlas) {
-            this.tileAtlas.destroy(true);
-            this.tileAtlas = null;
+        if (this.atlasGenerator) {
+            this.atlasGenerator.destroy();
+            this.atlasGenerator = null;
         }
         
-        this.atlasTextures.clear();
+        if (this.atlasTexture) {
+            this.atlasTexture.destroy(true);
+            this.atlasTexture = null;
+        }
     }
 }

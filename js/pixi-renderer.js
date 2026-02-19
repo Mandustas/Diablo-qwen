@@ -1500,6 +1500,7 @@ class PIXIRenderer {
     initTileBatchRenderer() {
         if (!this.tileBatchRenderer) {
             this.tileBatchRenderer = new TileBatchRenderer(this);
+            this.tileBatchRenderer.initAtlas();
             console.log('[PIXIRenderer] TileBatchRenderer инициализирован');
         }
     }
