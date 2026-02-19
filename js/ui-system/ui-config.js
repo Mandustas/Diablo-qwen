@@ -36,11 +36,12 @@ const UIConfig = {
         },
 
         // Цвета редкости предметов
+        // серый, зеленый, синий, оранжевый
         rarity: {
             common: '#9d9d9d',
             uncommon: '#4CAF50',
             rare: '#2196F3',
-            epic: '#9C27B0'
+            epic: '#FF9800'
         },
 
         // Цвета прогресс-баров
@@ -247,7 +248,7 @@ const UIConfig = {
         minimap: { x: 'left', y: 'bottom', anchor: { x: 0, y: 1 }, leftOffset: 20, bottomOffset: 20 },
         panelButtons: { x: 'right', y: 'top', anchor: { x: 1, y: 0 }, rightOffset: 20, topOffset: 20 },
         pauseMenu: { x: '50%', y: '50%', anchor: { x: 0.5, y: 0.5 } },
-        actionLog: { x: 'right', y: 'bottom', anchor: { x: 1, y: 1 }, rightOffset: 20, bottomOffset: 80 }
+        actionLog: { x: 'right', y: 'bottom', anchor: { x: 1, y: 1 }, rightOffset: 20, bottomOffset: 20 }
     },
 
     // Анимации

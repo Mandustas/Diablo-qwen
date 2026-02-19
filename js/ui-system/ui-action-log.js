@@ -9,9 +9,9 @@ class UIActionLog extends UIComponent {
 
         this.game = game;
 
-        // Размеры
-        this.width = config.width || 280;
-        this.height = config.height || 200;
+        // Размеры (ширина в 1.5 раза больше базовой, высота как у миникарты)
+        this.width = config.width || 420; // 280 * 1.5
+        this.height = config.height || 265; // Высота миникарты
         this.padding = 12;
         this.headerHeight = 28;
         this.scrollbarWidth = 12;
@@ -50,13 +50,13 @@ class UIActionLog extends UIComponent {
                 thumb: '#3a2a1a',
                 thumbHover: '#4a3a2a'
             },
-            // Цвета для типов сообщений
+            // Цвета для типов сообщений (без иконок)
             messageTypes: {
-                level: { color: '#FFD700', icon: '⬆', prefix: 'УРОВЕНЬ' },
-                item: { color: '#c9b896', icon: '📦', prefix: 'ПРЕДМЕТ' },
-                kill: { color: '#ff4a4a', icon: '⚔', prefix: 'УБИЙСТВО' },
-                experience: { color: '#4CAF50', icon: '✨', prefix: 'ОПЫТ' },
-                default: { color: '#c9b896', icon: '•', prefix: '' }
+                level: { color: '#FFD700' },
+                item: { color: '#ffffff' }, // Белый для текста "Получен предмет:"
+                kill: { color: '#ff4a4a' },
+                experience: { color: '#4CAF50' },
+                default: { color: '#c9b896' }
             }
         };
 
@@ -271,20 +271,33 @@ class UIActionLog extends UIComponent {
     }
 
     /**
+     * Форматирование времени в формате "час:мин:сек"
+     */
+    formatTime(timestamp) {
+        const date = new Date(timestamp);
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        const seconds = date.getSeconds().toString().padStart(2, '0');
+        return `${hours}:${minutes}:${seconds}`;
+    }
+
+    /**
      * Форматирование текста сообщения
      */
     formatMessageText(message, data) {
+        const time = this.formatTime(message.timestamp);
+        
         switch (message.type) {
             case 'level':
-                return `Достигнут уровень ${data.level}`;
+                return `${time} Достигнут уровень ${data.level}`;
             case 'item':
-                return `Получен предмет: ${data.itemName}`;
+                return `${time} Получен предмет: ${data.itemName}`;
             case 'kill':
-                return `Убит враг: ${data.enemyName}`;
+                return `${time} Убит враг: ${data.enemyName}`;
             case 'experience':
-                return `Получено опыта: ${data.amount}`;
+                return `${time} Получено опыта: ${data.amount}`;
             default:
-                return data.text || '';
+                return `${time} ${data.text || ''}`;
         }
     }
 
@@ -332,13 +345,14 @@ class UIActionLog extends UIComponent {
 
     /**
      * Получение цвета редкости
+     * серый (common), зеленый (uncommon), синий (rare), оранжевый (epic)
      */
     getRarityColor(rarity) {
         const rarityColors = {
-            common: '#9d9d9d',
-            uncommon: '#4CAF50',
-            rare: '#2196F3',
-            epic: '#9C27B0'
+            common: '#9d9d9d',    // серый
+            uncommon: '#4CAF50',  // зеленый
+            rare: '#2196F3',      // синий
+            epic: '#FF9800'       // оранжевый
         };
         return rarityColors[rarity] || rarityColors.common;
     }
@@ -540,6 +554,12 @@ class UIActionLog extends UIComponent {
      * Создание текстового спрайта для сообщения
      */
     createMessageText(message, maxWidth) {
+        // Для предметов используем составной текст с разными цветами
+        if (message.type === 'item' && message.raw) {
+            return this.createItemMessageText(message, maxWidth);
+        }
+
+        // Для остальных сообщений - обычный текст
         const textStyle = {
             fontFamily: UIConfig.fonts.family,
             fontSize: 11,
@@ -552,18 +572,69 @@ class UIActionLog extends UIComponent {
             dropShadowDistance: 1
         };
 
-        // Формируем текст с иконкой
-        let displayText = '';
-        if (message.icon) {
-            displayText = `${message.icon} ${message.text}`;
-        } else {
-            displayText = message.text;
-        }
-
-        const textSprite = new PIXI.Text(displayText, textStyle);
+        const textSprite = new PIXI.Text(message.text, textStyle);
         textSprite.anchor.set(0, 0);
 
         return textSprite;
+    }
+
+    /**
+     * Создание составного текста для предмета
+     * Белый текст для "Время Получен предмет: " и цвет качества для названия
+     */
+    createItemMessageText(message, maxWidth) {
+        const container = new PIXI.Container();
+        
+        const baseStyle = {
+            fontFamily: UIConfig.fonts.family,
+            fontSize: 11,
+            dropShadow: true,
+            dropShadowColor: '#000000',
+            dropShadowBlur: 1,
+            dropShadowDistance: 1
+        };
+
+        // Формируем части текста
+        const time = this.formatTime(message.timestamp);
+        const prefix = `${time} Получен предмет: `;
+        const itemName = message.raw.name || 'Неизвестный предмет';
+        const rarityColor = this.getRarityColor(message.raw.rarity);
+
+        // Создаем текст префикса (белый)
+        const prefixStyle = { ...baseStyle, fill: 0xffffff };
+        const prefixText = new PIXI.Text(prefix, prefixStyle);
+        prefixText.anchor.set(0, 0);
+        container.addChild(prefixText);
+
+        // Создаем текст названия предмета (цвет качества)
+        const nameStyle = { ...baseStyle, fill: this.hexToDecimal(rarityColor) };
+        const nameText = new PIXI.Text(itemName, nameStyle);
+        nameText.anchor.set(0, 0);
+        nameText.x = prefixText.width;
+        container.addChild(nameText);
+
+        // Проверяем, не превышает ли ширина
+        const totalWidth = container.width;
+        if (totalWidth > maxWidth) {
+            // Если слишком длинное, используем обычный текст с переносом
+            container.destroy({ children: true });
+            
+            const fullTextStyle = {
+                fontFamily: UIConfig.fonts.family,
+                fontSize: 11,
+                fill: this.hexToDecimal(rarityColor),
+                wordWrap: true,
+                wordWrapWidth: maxWidth,
+                dropShadow: true,
+                dropShadowColor: '#000000',
+                dropShadowBlur: 1,
+                dropShadowDistance: 1
+            };
+            
+            return new PIXI.Text(message.text, fullTextStyle);
+        }
+
+        return container;
     }
 
     /**
