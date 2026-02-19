@@ -23,6 +23,9 @@ class ItemDrop {
         this.targetY = y; // Конечная позиция
         this.fallProgress = 0; // Прогресс падения (0-1)
 
+        // Callback при подборе предмета
+        this.onPickupCallback = null;
+
         // Применяем смещение для предотвращения наложения
         this.applyStackOffset();
     }
@@ -83,6 +86,11 @@ class ItemDrop {
         if (character.addToInventory(this.item)) {
             this.pickedUp = true;
             console.log(`Подобран предмет: ${this.item.name} (${this.item.rarity})`);
+            
+            // Вызываем callback если он установлен
+            if (this.onPickupCallback) {
+                this.onPickupCallback(this.item);
+            }
             return true;
         }
 
@@ -93,6 +101,8 @@ class ItemDrop {
 class ItemDropSystem {
     constructor() {
         this.drops = [];
+        // Callback при подборе предмета (принимает item)
+        this.onItemPickup = null;
     }
 
     /**
@@ -104,6 +114,12 @@ class ItemDropSystem {
         const stackOffset = nearbyDrops.length;
         
         const drop = new ItemDrop(item, x, y, stackOffset);
+        
+        // Устанавливаем callback для подбора предмета
+        if (this.onItemPickup) {
+            drop.onPickupCallback = this.onItemPickup.bind(this);
+        }
+        
         this.drops.push(drop);
         return drop;
     }

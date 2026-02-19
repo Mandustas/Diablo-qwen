@@ -23,6 +23,13 @@ class Game {
         // Система выпадения предметов
         this.itemDropSystem = new ItemDropSystem();
 
+        // Устанавливаем callback для логирования подбора предметов
+        this.itemDropSystem.onItemPickup = (item) => {
+            if (this.uiActionLog) {
+                this.uiActionLog.addItemMessage(item);
+            }
+        };
+
         // Состояние игры
         this.gameState = 'playing';
 
@@ -58,6 +65,10 @@ class Game {
         // Меню паузы
         this.uiPauseMenu = new UIPauseMenu(this, { visible: false });
         this.uiManager.register('pauseMenu', this.uiPauseMenu);
+
+        // Лог действий
+        this.uiActionLog = new UIActionLog(this, { visible: true });
+        this.uiManager.register('actionLog', this.uiActionLog);
         // =================================
 
         this.setupEventListeners();
@@ -106,6 +117,10 @@ class Game {
         // Устанавливаем обработчик изменения уровня персонажа
         this.character.onLevelChanged = (level, x, y) => {
             this.levelUpEffect.triggerLevelUp(x, y, level);
+            // Добавляем сообщение в лог
+            if (this.uiActionLog) {
+                this.uiActionLog.addLevelUpMessage(level);
+            }
         };
 
         // Загружаем чанки вокруг персонажа
@@ -973,6 +988,11 @@ class Game {
             if (!enemy.isAlive()) {
                 // Добавляем опыт за убийство
                 this.character.gainExperience(enemy.stats.maxHealth / 2);
+
+                // Добавляем сообщение в лог об убийстве
+                if (this.uiActionLog) {
+                    this.uiActionLog.addKillMessage(enemy.type);
+                }
 
                 // Добавляем случайные предметы с врага
                 this.dropItemsFromEnemy(enemy);

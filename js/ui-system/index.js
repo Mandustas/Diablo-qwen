@@ -42,6 +42,7 @@ if (typeof window !== 'undefined') {
     window.UISystem.UISkillTree = UISkillTree;
     window.UISystem.UIInventory = UIInventory;
     window.UISystem.UIStatsWindow = UIStatsWindow;
+    window.UISystem.UIActionLog = UIActionLog;
 }
 
 // Экспорт для Node.js
