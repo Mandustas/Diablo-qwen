@@ -3426,7 +3426,6 @@ class PIXIRenderer {
      */
     updateEnemyHealthBar(enemy, justHit = false) {
         if (this.enemyHealthBars) {
-            console.log(`[PIXIRenderer] updateEnemyHealthBar вызван для: ${enemy.name || enemy.type}`);
             this.enemyHealthBars.update(enemy, enemy.health, enemy.maxHealth, justHit);
         } else {
             console.warn('[PIXIRenderer] enemyHealthBars не инициализирован!');

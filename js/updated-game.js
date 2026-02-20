@@ -58,6 +58,10 @@ class Game {
         this.uiMinimap = new UIMinimap(this, { visible: true });
         this.uiManager.register('minimap', this.uiMinimap);
 
+        // Большая карта
+        this.uiMapWindow = new UIMapWindow(this, { visible: false });
+        this.uiManager.register('map', this.uiMapWindow);
+
         // Панель кнопок открытия окон
         this.uiPanelButtons = new UIPanelButtons({ visible: true });
         this.uiManager.register('panelButtons', this.uiPanelButtons);
@@ -200,6 +204,14 @@ class Game {
             if (e.key >= '1' && e.key <= '9') {
                 e.preventDefault();
                 this.handleSkillHotkey(parseInt(e.key));
+            }
+
+            // TAB - открыть карту
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                if (this.uiManager) {
+                    this.uiManager.toggle('map');
+                }
             }
         });
 
@@ -667,7 +679,6 @@ class Game {
 
         // Проверяем, что позиция проходима
         if (!this.isPassable(tilePos.tileX, tilePos.tileY)) {
-            console.warn(`Попытка создать врага на непроходимом тайле (${tilePos.tileX}, ${tilePos.tileY})`);
             return null;
         }
 
@@ -844,8 +855,6 @@ class Game {
 
                 // Создаем выпавший предмет на земле
                 this.itemDropSystem.createItemDrop(item, enemy.x, enemy.y);
-
-                console.log(`Выпал предмет: ${item.name} (${item.rarity}) с врага ${enemy.type}`);
             }
         }
     }
@@ -1271,6 +1280,21 @@ class Game {
         const rect = this.renderer.app.view.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
+
+        // Проверяем, находится ли курсор над картой
+        if (this.uiMapWindow && this.uiMapWindow.container && this.uiMapWindow.isOpen) {
+            const mapContainer = this.uiMapWindow.container;
+            const mapBounds = mapContainer.getBounds();
+            
+            if (mapBounds && 
+                mouseX >= mapBounds.x && 
+                mouseX <= mapBounds.x + mapBounds.width &&
+                mouseY >= mapBounds.y && 
+                mouseY <= mapBounds.y + mapBounds.height) {
+                // Курсор над картой - не зумим игру
+                return;
+            }
+        }
 
         // Проверяем, находится ли курсор над логом действий
         if (this.uiActionLog && this.uiActionLog.container) {

@@ -12,8 +12,8 @@ class UIPanelButtons extends UIComponent {
         this.buttonGap = 8;
         this.padding = 10;
 
-        // Вычисляем размеры (4 кнопки)
-        this.width = this.buttonWidth * 4 + this.buttonGap * 3 + this.padding * 2;
+        // Вычисляем размеры (5 кнопок)
+        this.width = this.buttonWidth * 5 + this.buttonGap * 4 + this.padding * 2;
         this.height = this.buttonHeight + this.padding * 2;
 
         // Позиционирование
@@ -42,6 +42,7 @@ class UIPanelButtons extends UIComponent {
      */
     createButtons() {
         const buttonConfig = [
+            { key: 'map', text: 'КАРТА (TAB)', window: 'map' },
             { key: 'stats', text: 'ХАРАКТЕРИСТИКИ (S)', window: 'stats' },
             { key: 'inventory', text: 'ИНВЕНТАРЬ (I)', window: 'inventory' },
             { key: 'skillTree', text: 'НАВЫКИ (C)', window: 'skillTree' },

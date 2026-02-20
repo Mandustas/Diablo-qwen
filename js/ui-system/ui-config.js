@@ -244,6 +244,7 @@ const UIConfig = {
         skillTree: { x: '50%', y: '50%', anchor: { x: 0.5, y: 0.5 } },
         inventory: { x: '50%', y: '50%', anchor: { x: 0.5, y: 0.5 } },
         stats: { x: '50%', y: '50%', anchor: { x: 0.5, y: 0.5 } },
+        map: { x: '50%', y: '50%', anchor: { x: 0.5, y: 0.5 } },
         skillBar: { x: '50%', y: 'bottom', anchor: { x: 0.487, y: 1 }, bottomOffset: 10 },
         minimap: { x: 'left', y: 'bottom', anchor: { x: 0, y: 1 }, leftOffset: 20, bottomOffset: 20 },
         panelButtons: { x: 'right', y: 'top', anchor: { x: 1, y: 0 }, rightOffset: 20, topOffset: 20 },
