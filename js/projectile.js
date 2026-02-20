@@ -138,9 +138,10 @@ class Projectile {
      */
     update(deltaTime) {
         if (!this.active) return false;
-        
+
         // Перемещаем снаряд
-        const moveSpeed = this.speed * (deltaTime / 16);
+        // speed теперь в пикселях в секунду, конвертируем в пиксели за deltaTime
+        const moveSpeed = this.speed * (deltaTime / 1000);
         this.x += this.directionX * moveSpeed;
         this.y += this.directionY * moveSpeed;
         

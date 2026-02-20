@@ -824,17 +824,19 @@ class Character {
      * @returns {number} - значение восстановления маны
      */
     getManaRegenRate() {
-        // Базовое восстановление + бонус от энергии
+        // Базовое восстановление + бонус от энергии (в секунду)
         return GAME_CONFIG.CHARACTER.BASE_MANA_REGEN + this.getTotalStat('energy') * GAME_CONFIG.CHARACTER.ENERGY_MANA_REGEN_MULTIPLIER;
     }
-    
+
     /**
      * Восстановление маны с течением времени
+     * @param {number} deltaTime - время с последнего обновления в мс
      */
-    regenerateMana() {
-        // Восстанавливаем ману по чуть-чуть каждый тик
+    regenerateMana(deltaTime = 16.67) {
+        // Восстанавливаем ману по чуть-чуть каждый кадр
+        // BASE_MANA_REGEN теперь в мана в секунду, конвертируем в мана за deltaTime
         if (this.mana < this.maxMana) {
-            const regenAmount = this.getManaRegenRate() / GAME_CONFIG.CHARACTER.FPS_FOR_MANA_REGEN; // Предполагаем 60 FPS
+            const regenAmount = this.getManaRegenRate() * (deltaTime / 1000);
             this.restoreMana(regenAmount);
         }
     }

@@ -144,7 +144,7 @@ class Fireball extends Projectile {
     updateParticles(deltaTime) {
         for (const particle of this.particles) {
             particle.lifetime += deltaTime;
-            
+
             // Если частица умерла, возрождаем её
             if (particle.lifetime > particle.maxLifetime) {
                 particle.lifetime = 0;
@@ -152,12 +152,13 @@ class Fireball extends Projectile {
                 particle.y = 0;
                 particle.size = 3 + Math.random() * 5;
             }
-            
+
             // Движение частицы (назад относительно движения снаряда)
             particle.phase += deltaTime * 0.01;
-            particle.x -= this.directionX * particle.speed * (deltaTime / 16);
-            particle.y -= this.directionY * particle.speed * (deltaTime / 16);
-            
+            // speed теперь в пикселях в секунду, конвертируем в пиксели за deltaTime
+            particle.x -= this.directionX * particle.speed * (deltaTime / 1000);
+            particle.y -= this.directionY * particle.speed * (deltaTime / 1000);
+
             // Добавляем небольшое случайное движение
             particle.x += Math.sin(particle.phase) * 0.5;
             particle.y += Math.cos(particle.phase) * 0.5;
@@ -304,25 +305,26 @@ class Fireball extends Projectile {
      */
     updateExplosion(deltaTime) {
         this.explosionTime += deltaTime;
-        
+
         // Проверяем, закончился ли взрыв
         if (this.explosionTime >= this.explosionLifetime) {
             this.active = false;
             return false;
         }
-        
+
         const progress = this.explosionTime / this.explosionLifetime;
-        
+
         // Обновляем частицы взрыва
         this.flameGraphics.clear();
         this.glowGraphics.clear();
-        
+
         for (const particle of this.particles) {
             particle.lifetime += deltaTime;
-            
+
             // Движение частицы
-            particle.x += particle.vx * (deltaTime / 16);
-            particle.y += particle.vy * (deltaTime / 16);
+            // speed теперь в пикселях в секунду, конвертируем в пиксели за deltaTime
+            particle.x += particle.vx * (deltaTime / 1000);
+            particle.y += particle.vy * (deltaTime / 1000);
             
             // Затухание
             const alpha = particle.alpha * (1 - progress);

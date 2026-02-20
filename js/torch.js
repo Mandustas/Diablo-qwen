@@ -186,14 +186,15 @@ class Torch {
      */
     updateFlame(deltaTime) {
         if (!this.flameGraphics) return;
-        
+
         this.flameGraphics.clear();
-        
+
         // Рисуем частицы пламени
         for (const particle of this.flameParticles) {
             // Обновляем позицию частицы
             particle.phase += deltaTime * 0.01;
-            particle.y -= particle.speed * (deltaTime / 16);
+            // speed теперь в пикселях в секунду, конвертируем в пиксели за deltaTime
+            particle.y -= particle.speed * (deltaTime / 1000);
             particle.x = Math.sin(particle.phase) * 2;
             
             // Сбрасываем частицу, когда она поднимается слишком высоко

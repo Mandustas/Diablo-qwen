@@ -63,16 +63,17 @@ class Enemy {
      * @param {Character} player - игрок
      * @param {Array<Array<number>>} map - карта (может быть null для бесконечной генерации)
      * @param {ChunkSystem} chunkSystem - система чанков (опционально)
+     * @param {number} deltaTime - время с последнего обновления в мс
      */
-    update(player, map, chunkSystem = null) {
-        // Уменьшаем кулдаун атаки
+    update(player, map, chunkSystem = null, deltaTime = 16.67) {
+        // Уменьшаем кулдаун атаки (теперь в миллисекундах)
         if (this.attackCooldown > 0) {
-            this.attackCooldown--;
+            this.attackCooldown -= deltaTime;
         }
 
         // Обновляем таймер анимации
         this.idleAnimTimer++;
-        
+
         // Запоминаем последнюю позицию
         this.lastX = this.x;
         this.lastY = this.y;
@@ -91,17 +92,17 @@ class Enemy {
             this.wanderTarget = null;
 
             // Двигаемся к игроку
-            this.moveToTarget(player, map, chunkSystem);
+            this.moveToTarget(player, map, chunkSystem, deltaTime);
 
             // Если в пределах атаки и кулдаун прошел
-            if (distanceToPlayer <= this.attackRange && this.attackCooldown === 0) {
+            if (distanceToPlayer <= this.attackRange && this.attackCooldown <= 0) {
                 this.state = 'attacking';
                 this.attack(player);
             }
         } else {
             // Игрок вне зоны обнаружения - имитируем жизнедеятельность
             this.target = null;
-            this.performIdleBehavior(map, chunkSystem);
+            this.performIdleBehavior(map, chunkSystem, deltaTime);
         }
     }
     
@@ -109,10 +110,11 @@ class Enemy {
      * Имитация жизнедеятельности (блуждание)
      * @param {Array<Array<number>>} map - карта
      * @param {ChunkSystem} chunkSystem - система чанков
+     * @param {number} deltaTime - время с последнего обновления в мс
      */
-    performIdleBehavior(map, chunkSystem) {
-        this.wanderTimer++;
-        
+    performIdleBehavior(map, chunkSystem, deltaTime = 16.67) {
+        this.wanderTimer += deltaTime;
+
         // Каждые 2-5 секунд выбираем новую цель для блуждания
         if (this.wanderTimer >= this.wanderInterval || !this.wanderTarget) {
             // Выбираем случайную точку для блуждания
@@ -128,28 +130,29 @@ class Enemy {
             this.wanderTimer = 0;
             this.wanderInterval = GAME_CONFIG.ENEMY.WANDER_INTERVAL_MIN + Math.random() * (GAME_CONFIG.ENEMY.WANDER_INTERVAL_MAX - GAME_CONFIG.ENEMY.WANDER_INTERVAL_MIN); // 2-5 секунд
         }
-        
+
         // Если есть цель для блуждания, двигаемся к ней
         if (this.wanderTarget) {
             this.state = 'wandering';
-            
+
             const dx = this.wanderTarget.x - this.x;
             const dy = this.wanderTarget.y - this.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
-            
+
             // Если достигли цели или близко к ней
             if (distance < 10) {
                 this.wanderTarget = null;
                 this.wanderTimer = 0;
             } else {
                 // Двигаемся к цели блуждания (медленнее, чем к игроку)
-                const wanderSpeed = this.speed * GAME_CONFIG.ENEMY.WANDER_SPEED_MULTIPLIER; // Половина обычной скорости
+                // speed теперь в пикселях в секунду, конвертируем в пиксели за deltaTime
+                const wanderSpeed = (this.speed * GAME_CONFIG.ENEMY.WANDER_SPEED_MULTIPLIER) * (deltaTime / 1000);
                 const moveX = (dx / distance) * wanderSpeed;
                 const moveY = (dy / distance) * wanderSpeed;
-                
+
                 const newX = this.x + moveX;
                 const newY = this.y + moveY;
-                
+
                 // Проверяем проходимость
                 let tilePos;
                 if (typeof getTileIndex !== 'undefined') {
@@ -157,14 +160,14 @@ class Enemy {
                 } else {
                     tilePos = { tileX: Math.floor(newX / 64), tileY: Math.floor(newY / 32) };
                 }
-                
+
                 let canMove = false;
                 if (map) {
                     canMove = this.isPassable(tilePos.tileX, tilePos.tileY, map);
                 } else if (chunkSystem) {
                     canMove = chunkSystem.isPassable(tilePos.tileX, tilePos.tileY);
                 }
-                
+
                 if (canMove) {
                     this.x = newX;
                     this.y = newY;
@@ -185,15 +188,18 @@ class Enemy {
      * @param {Character} target - цель для движения
      * @param {Array<Array<number>>} map - карта для проверки столкновений
      * @param {ChunkSystem} chunkSystem - система чанков (опционально)
+     * @param {number} deltaTime - время с последнего обновления в мс
      */
-    moveToTarget(target, map, chunkSystem = null) {
+    moveToTarget(target, map, chunkSystem = null, deltaTime = 16.67) {
         const dx = target.x - this.x;
         const dy = target.y - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance > 0) {
-            const moveX = (dx / distance) * this.speed;
-            const moveY = (dy / distance) * this.speed;
+            // speed теперь в пикселях в секунду, конвертируем в пиксели за deltaTime
+            const moveSpeed = this.speed * (deltaTime / 1000);
+            const moveX = (dx / distance) * moveSpeed;
+            const moveY = (dy / distance) * moveSpeed;
 
             // Проверяем столкновения с препятствиями (упрощенная проверка)
             const newX = this.x + moveX;

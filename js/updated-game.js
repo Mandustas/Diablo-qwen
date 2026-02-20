@@ -947,14 +947,15 @@ class Game {
         if (this.gameState !== 'playing') return;
 
         // Обработка движения персонажа с клавиатуры
-        const speed = GAME_CONFIG.PLAYER_SPEED; // Увеличена скорость в 2 раза
+        // PLAYER_SPEED теперь в пикселях в секунду, конвертируем в пиксели за deltaTime
+        const speedPerFrame = GAME_CONFIG.PLAYER_SPEED * (deltaTime / 1000);
         let targetX = this.character.x;
         let targetY = this.character.y;
 
-        if (this.keys['w'] || this.keys['ц']) targetY -= speed;
-        if (this.keys['s'] || this.keys['ы']) targetY += speed;
-        if (this.keys['a'] || this.keys['ф']) targetX -= speed;
-        if (this.keys['d'] || this.keys['в']) targetX += speed;
+        if (this.keys['w'] || this.keys['ц']) targetY -= speedPerFrame;
+        if (this.keys['s'] || this.keys['ы']) targetY += speedPerFrame;
+        if (this.keys['a'] || this.keys['ф']) targetX -= speedPerFrame;
+        if (this.keys['d'] || this.keys['в']) targetX += speedPerFrame;
 
         // Двигаем персонажа только если есть ввод
         if (targetX !== this.character.x || targetY !== this.character.y) {
@@ -997,20 +998,28 @@ class Game {
             }
         }
 
-        // Обновляем спаун врагов (реже - раз в 60 кадров)
-        if (this.updateCounter === undefined) this.updateCounter = 0;
-        this.updateCounter++;
-        if (this.updateCounter >= GAME_CONFIG.UPDATE.ENEMY_SPAWN_INTERVAL) {
+        // Обновляем спаун врагов (реже - раз в 1000 мс)
+        if (this.spawnTimer === undefined) this.spawnTimer = 0;
+        this.spawnTimer += deltaTime;
+        if (this.spawnTimer >= GAME_CONFIG.UPDATE.ENEMY_SPAWN_INTERVAL) {
             this.updateEnemySpawning();
-            this.updateCounter = 0;
+            this.spawnTimer = 0;
+        }
+
+        // Обновляем таймер для периодических задач (очистка факелов)
+        if (this.periodicTimer === undefined) this.periodicTimer = 0;
+        this.periodicTimer += deltaTime;
+        const shouldRunPeriodicTasks = this.periodicTimer >= 1000; // Раз в секунду
+        if (shouldRunPeriodicTasks) {
+            this.periodicTimer = 0;
         }
 
         // Обновляем врагов
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             const enemy = this.enemies[i];
 
-            // Обновляем состояние врага
-            enemy.update(this.character, null, this.chunkSystem);
+            // Обновляем состояние врага с передачей deltaTime
+            enemy.update(this.character, null, this.chunkSystem, deltaTime);
 
             // Проверяем коллизии с другими врагами и персонажем
             this.handleEnemyCollisions(enemy);
@@ -1039,8 +1048,8 @@ class Game {
         // Обновляем систему выпадения предметов
         this.itemDropSystem.update();
 
-        // Обновляем восстановление маны
-        this.character.regenerateMana();
+        // Обновляем восстановление маны с передачей deltaTime
+        this.character.regenerateMana(deltaTime);
 
         // Обновляем эффект получения уровня
         this.levelUpEffect.update(deltaTime);
@@ -1061,9 +1070,9 @@ class Game {
         // Обновляем факелы
         if (this.torchManager) {
             this.torchManager.update(deltaTime);
-            
-            // Периодически очищаем далёкие факелы (каждые 60 кадров)
-            if (this.updateCounter % 60 === 0) {
+
+            // Периодически очищаем далёкие факелы (раз в секунду)
+            if (shouldRunPeriodicTasks) {
                 const unloadDistance = (GAME_CONFIG.LIGHTING.TORCH.UNLOAD_DISTANCE || 20) * GAME_CONFIG.TILE.BASE_SIZE;
                 this.torchManager.cullTorches(this.character.x, this.character.y, unloadDistance);
             }

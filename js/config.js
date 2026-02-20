@@ -3,7 +3,7 @@
 const GAME_CONFIG = {
     // Настройки игры
     INITIAL_CHUNK_SIZE: 16,
-    PLAYER_SPEED: 8,
+    PLAYER_SPEED: 200, // Пикселей в секунду (вместо 8 пикселей за кадр)
     ENEMY_SPAWN_ATTEMPTS: 1000,
     CHUNK_LOAD_RADIUS: 5,
     CHUNK_UNLOAD_RADIUS: 7,
@@ -71,9 +71,8 @@ const GAME_CONFIG = {
         DEXTERITY_CRITICAL_MULTIPLIER: 0.2, // Ловкость влияет на крит. шанс
         
         // Восстановление маны
-        BASE_MANA_REGEN: 1,
+        BASE_MANA_REGEN: 5, // Маны в секунду
         ENERGY_MANA_REGEN_MULTIPLIER: 0.1,
-        FPS_FOR_MANA_REGEN: 60, // Предполагаем 60 FPS
         
         // Хитбоксы
         HITBOX_RADIUS: 16,
@@ -87,50 +86,50 @@ const GAME_CONFIG = {
         TYPES: {
             BASIC: {
                 maxHealth: 50,
-                speed: 1,
+                speed: 60, // Пикселей в секунду
                 damage: 10,
                 detectionRange: 100,
                 attackRange: 30
             },
             WEAK: {
                 maxHealth: 30,
-                speed: 1.2,
+                speed: 72, // Пикселей в секунду
                 damage: 8,
                 detectionRange: 80,
                 attackRange: 25
             },
             STRONG: {
                 maxHealth: 80,
-                speed: 0.8,
+                speed: 48, // Пикселей в секунду
                 damage: 15,
                 detectionRange: 120,
                 attackRange: 35
             },
             FAST: {
                 maxHealth: 40,
-                speed: 1.8,
+                speed: 108, // Пикселей в секунду
                 damage: 12,
                 detectionRange: 150,
                 attackRange: 30
             },
             TANK: {
                 maxHealth: 120,
-                speed: 0.5,
+                speed: 30, // Пикселей в секунду
                 damage: 20,
                 detectionRange: 70,
                 attackRange: 40
             }
         },
-        
+
         // Настройки атаки
-        ATTACK_COOLDOWN: 45,
-        
+        ATTACK_COOLDOWN: 750, // Миллисекунд между атаками
+
         // Хитбоксы
         HITBOX_RADIUS: 15,
-        
+
         // Блуждание
-        WANDER_INTERVAL_MIN: 120,
-        WANDER_INTERVAL_MAX: 300,
+        WANDER_INTERVAL_MIN: 2000, // Миллисекунд
+        WANDER_INTERVAL_MAX: 5000, // Миллисекунд
         WANDER_DISTANCE_MIN: 30,
         WANDER_DISTANCE_MAX: 100,
         WANDER_SPEED_MULTIPLIER: 0.5
@@ -230,7 +229,7 @@ const GAME_CONFIG = {
     
     // Настройки обновления
     UPDATE: {
-        ENEMY_SPAWN_INTERVAL: 60 // Обновление спауна врагов раз в 60 кадров
+        ENEMY_SPAWN_INTERVAL: 1000 // Миллисекунд между обновлениями спауна врагов
     },
     
     // Настройки UI компонентов
@@ -434,7 +433,7 @@ const GAME_CONFIG = {
             LIGHT_RADIUS: 4,         // Радиус освещения в тайлах (уменьшено)
             LIGHT_COLOR: { R: 1.0, G: 0.5, B: 0.1 }, // Ярко-оранжевый
             LIGHT_INTENSITY: 1.0,    // Интенсивность освещения (уменьшено)
-            SPEED: 6,                // Скорость полёта
+            SPEED: 300,              // Скорость полёта (пикселей в секунду)
             PARTICLE_COUNT: 10,      // Количество частиц (уменьшено)
             EXPLOSION_RADIUS: 2,     // Радиус взрыва в тайлах (уменьшено)
             MAX_RANGE: 12            // Максимальная дальность полёта в тайлах
