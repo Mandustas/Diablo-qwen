@@ -175,6 +175,9 @@ class PIXIRenderer {
 
     // Система пакетного рендеринга тайлов
     this.tileBatchRenderer = null;
+    
+    // Система тумана войны (инициализируется извне)
+    this.fogOfWar = null;
     }
 
     /**
@@ -1490,6 +1493,14 @@ class PIXIRenderer {
     }
 
     /**
+     * Установка системы тумана войны
+     * @param {FogOfWarSystem} fogOfWar - система тумана войны
+     */
+    setFogOfWar(fogOfWar) {
+        this.fogOfWar = fogOfWar;
+    }
+
+    /**
      * Инициализация системы пакетного рендеринга
      */
     initTileBatchRenderer() {
@@ -1624,6 +1635,11 @@ class PIXIRenderer {
 
                 // Применяем освещение с мировыми координатами
                 this.lightingSystem.applyLightingToSprite(sprite, worldX, worldY, tileType);
+                
+                // Применяем туман войны, если система активна
+                if (this.fogOfWar) {
+                    this.fogOfWar.applyFogToSprite(sprite, sprite.tileX, sprite.tileY);
+                }
             }
         }
     }
@@ -2463,6 +2479,16 @@ class PIXIRenderer {
      * @returns {boolean} - true если враг видим и отрендерен
      */
     renderEnemy(enemy) {
+        // Проверяем видимость врага через туман войны
+        if (this.fogOfWar && !this.fogOfWar.isPositionVisible(enemy.x, enemy.y)) {
+            // Враг в тумане войны - скрываем спрайт
+            const enemySprite = this.entitySprites.get(enemy);
+            if (enemySprite && enemySprite.parent) {
+                this.objectLayer.removeChild(enemySprite);
+            }
+            return false;
+        }
+        
         // Проверяем видимость врага (culling)
         if (!this.isObjectVisible(enemy.x, enemy.y, 32, 32)) {
             // Враг не видим - скрываем спрайт если он есть
@@ -4028,6 +4054,16 @@ class PIXIRenderer {
         // Рендерим активные предметы
         for (const drop of drops) {
             if (drop.pickedUp) continue;
+
+            // Проверяем видимость предмета через туман войны
+            if (this.fogOfWar && !this.fogOfWar.isPositionVisible(drop.displayX, drop.displayY)) {
+                // Предмет в тумане войны - скрываем спрайт
+                const sprite = this.activeItemSprites.get(drop);
+                if (sprite && sprite.parent) {
+                    this.itemLayer.removeChild(sprite);
+                }
+                continue;
+            }
 
             // Вычисляем мировые координаты с учётом зума
             // mainContainer уже имеет смещение камеры, поэтому используем только мировые координаты

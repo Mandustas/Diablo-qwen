@@ -44,7 +44,10 @@ class UIMinimap extends UIComponent {
             rock: '#3a3a3a',
             water: '#1a3a5a',
             ice: '#8ab4d4',
-            decor: '#3a4a2a'
+            decor: '#3a4a2a',
+            // Цвета тумана войны
+            unexplored: '#0a0808',
+            explored: '#1a1414'
         };
     }
 
@@ -261,6 +264,8 @@ class UIMinimap extends UIComponent {
      */
     drawActiveChunks(ctx, playerTileX, playerTileY) {
         const chunkSystem = this.game.chunkSystem;
+        const fogOfWar = this.game.fogOfWar;
+        const fogEnabled = GAME_CONFIG.FOG_OF_WAR.ENABLED && fogOfWar;
 
         // Проходим по всем активным чанкам
         for (const chunkKey of chunkSystem.activeChunks) {
@@ -285,6 +290,18 @@ class UIMinimap extends UIComponent {
                         continue;
                     }
 
+                    // Проверяем туман войны
+                    let fogColor = null;
+                    if (fogEnabled) {
+                        if (!fogOfWar.isTileExplored(worldTileX, worldTileY)) {
+                            // Неисследованный тайл - полностью тёмный
+                            fogColor = this.colors.unexplored;
+                        } else if (!fogOfWar.isTileVisible(worldTileX, worldTileY)) {
+                            // Исследованный, но не видимый сейчас - затемнённый
+                            fogColor = this.colors.explored;
+                        }
+                    }
+
                     const tileType = chunk.tiles[y][x];
 
                     // Определяем цвет тайла
@@ -305,7 +322,12 @@ class UIMinimap extends UIComponent {
                         color = this.colors.decor;
                     }
 
-                    if (color) {
+                    if (fogColor) {
+                        // Рисуем затемнённый тайл (туман войны)
+                        ctx.beginFill(this.hexToDecimal(fogColor));
+                        this.drawIsoTile(ctx, pos.x, pos.y, this.scale * 0.9);
+                        ctx.endFill();
+                    } else if (color) {
                         ctx.beginFill(this.hexToDecimal(color));
                         this.drawIsoTile(ctx, pos.x, pos.y, this.scale * 0.9);
                         ctx.endFill();
@@ -330,7 +352,15 @@ class UIMinimap extends UIComponent {
      * Рисование врагов на миникарте с изометрической проекцией
      */
     drawEnemiesIso(ctx, playerTileX, playerTileY) {
+        const fogOfWar = this.game.fogOfWar;
+        const fogEnabled = GAME_CONFIG.FOG_OF_WAR.ENABLED && fogOfWar;
+
         for (const enemy of this.game.enemies) {
+            // Проверяем видимость врага через туман войны
+            if (fogEnabled && !fogOfWar.isPositionVisible(enemy.x, enemy.y)) {
+                continue; // Пропускаем врагов в тумане войны
+            }
+
             const enemyTilePos = getTileIndex(enemy.x, enemy.y);
 
             // Получаем позицию на миникарте

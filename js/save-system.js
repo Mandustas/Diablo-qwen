@@ -13,6 +13,7 @@ class SaveSystem {
                 character: this.serializeCharacter(this.game.character),
                 enemies: this.serializeEnemies(this.game.enemies),
                 map: this.game.map,
+                fogOfWar: this.serializeFogOfWar(),
                 timestamp: Date.now()
             };
             
@@ -45,6 +46,11 @@ class SaveSystem {
             
             // Восстанавливаем карту
             this.game.map = gameState.map;
+            
+            // Восстанавливаем туман войны
+            if (gameState.fogOfWar && this.game.fogOfWar) {
+                this.deserializeFogOfWar(gameState.fogOfWar);
+            }
             
             // Обновляем UI
             this.game.character.updateInventoryUI();
@@ -238,6 +244,42 @@ class SaveSystem {
             enemy.maxHealth = enemyData.maxHealth;
             return enemy;
         });
+    }
+    
+    /**
+     * Сериализация тумана войны
+     * @returns {Object} - сериализованные данные
+     */
+    serializeFogOfWar() {
+        if (!this.game.fogOfWar) return null;
+        
+        const fogOfWar = this.game.fogOfWar;
+        const exploredTiles = [];
+        
+        // Преобразуем Set в массив для сохранения
+        for (const key of fogOfWar.explored) {
+            exploredTiles.push(key);
+        }
+        
+        return {
+            exploredTiles: exploredTiles,
+            exploredCount: exploredTiles.length
+        };
+    }
+    
+    /**
+     * Десериализация тумана войны
+     * @param {Object} fogData - сериализованные данные тумана войны
+     */
+    deserializeFogOfWar(fogData) {
+        if (!this.game.fogOfWar || !fogData) return;
+        
+        const fogOfWar = this.game.fogOfWar;
+        
+        // Восстанавливаем исследованные тайлы
+        fogOfWar.explored = new Set(fogData.exploredTiles || []);
+        
+        console.log(`Восстановлено ${fogOfWar.explored.size} исследованных тайлов`);
     }
     
     /**

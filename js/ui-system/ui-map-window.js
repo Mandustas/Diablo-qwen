@@ -52,6 +52,12 @@ class UIMapWindow extends UIComponent {
             6: 0x7abada,  // лёд - голубой
             7: 0x4a4a4a   // декорация - серый
         };
+        
+        // Цвета тумана войны
+        this.fogColors = {
+            unexplored: 0x0a0808,  // Неисследованный - полностью тёмный
+            explored: 0x1a1414     // Исследованный, но не видимый - затемнённый
+        };
     }
 
     /**
@@ -354,13 +360,32 @@ class UIMapWindow extends UIComponent {
      * Отрисовка тайлов карты в изометрической проекции
      */
     renderMapTiles() {
+        const fogOfWar = this.game.fogOfWar;
+        const fogEnabled = GAME_CONFIG.FOG_OF_WAR.ENABLED && fogOfWar;
+        
         // Рисуем все известные тайлы
         for (const [key, tileType] of this.mapData) {
             const [tileX, tileY] = key.split(',').map(Number);
-            const color = this.tileColors[tileType] || this.tileColors[0];
 
             // Преобразуем в изометрические координаты
             const pos = this.tileToMapIso(tileX, tileY);
+
+            // Проверяем туман войны
+            let color;
+            if (fogEnabled) {
+                if (!fogOfWar.isTileExplored(tileX, tileY)) {
+                    // Неисследованный тайл - полностью тёмный
+                    color = this.fogColors.unexplored;
+                } else if (!fogOfWar.isTileVisible(tileX, tileY)) {
+                    // Исследованный, но не видимый сейчас - затемнённый
+                    color = this.fogColors.explored;
+                } else {
+                    // Видимый тайл - нормальный цвет
+                    color = this.tileColors[tileType] || this.tileColors[0];
+                }
+            } else {
+                color = this.tileColors[tileType] || this.tileColors[0];
+            }
 
             // Рисуем изометрический тайл
             this.mapGraphics.beginFill(color);
@@ -403,15 +428,22 @@ class UIMapWindow extends UIComponent {
         if (!this.game.enemies) return;
 
         const enemies = this.game.enemies;
+        const fogOfWar = this.game.fogOfWar;
+        const fogEnabled = GAME_CONFIG.FOG_OF_WAR.ENABLED && fogOfWar;
         
-        // Проверяем, изменилось ли количество врагов
-        if (enemies.length !== this.lastEnemyCount) {
+        // Фильтруем видимых врагов
+        const visibleEnemies = fogEnabled 
+            ? enemies.filter(e => fogOfWar.isPositionVisible(e.x, e.y))
+            : enemies;
+        
+        // Проверяем, изменилось ли количество видимых врагов
+        if (visibleEnemies.length !== this.lastEnemyCount) {
             // Пересоздаем маркеры при изменении количества врагов
             this.enemyMarkers.removeChildren();
-            this.lastEnemyCount = enemies.length;
+            this.lastEnemyCount = visibleEnemies.length;
             
             // Создаем новые маркеры
-            for (let i = 0; i < enemies.length; i++) {
+            for (let i = 0; i < visibleEnemies.length; i++) {
                 const marker = new PIXI.Graphics();
                 marker.beginFill(0xFF4444);
                 marker.drawCircle(0, 0, 4);
@@ -422,8 +454,8 @@ class UIMapWindow extends UIComponent {
         
         // Обновляем позиции существующих маркеров
         const markers = this.enemyMarkers.children;
-        for (let i = 0; i < enemies.length && i < markers.length; i++) {
-            const enemy = enemies[i];
+        for (let i = 0; i < visibleEnemies.length && i < markers.length; i++) {
+            const enemy = visibleEnemies[i];
             const tilePos = getTileIndex(enemy.x, enemy.y);
             const pos = this.tileToMapIso(tilePos.tileX, tilePos.tileY);
             

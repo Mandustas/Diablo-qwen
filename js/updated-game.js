@@ -90,6 +90,10 @@ class Game {
         this.lightingSystem = new LightingSystem(GAME_CONFIG.LIGHTING);
         this.renderer.setLightingSystem(this.lightingSystem);
         
+        // Инициализируем систему тумана войны
+        this.fogOfWar = new FogOfWarSystem(this.lightingSystem, this.chunkSystem);
+        this.renderer.setFogOfWar(this.fogOfWar);
+        
         // Инициализация системы пакетного рендеринга тайлов
         this.renderer.initTileBatchRenderer();
 
@@ -1065,6 +1069,11 @@ class Game {
         // Обновляем систему освещения
         if (this.lightingSystem) {
             this.lightingSystem.update(deltaTime);
+        }
+
+        // Обновляем систему тумана войны
+        if (this.fogOfWar) {
+            this.fogOfWar.updateVisibility(this.character.x, this.character.y);
         }
 
         // Обновляем факелы
